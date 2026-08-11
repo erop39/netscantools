@@ -2636,6 +2636,20 @@ button.device-avatar--btn.is-busy {
   color: rgb(200 220 240 / 80%);
 }
 
+.planner-slot-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.planner-slot-icon.is-empty {
+  opacity: 0.55;
+  color: rgb(148 163 184 / 90%);
+  background: rgb(15 23 42 / 45%);
+  border-color: rgb(148 163 184 / 18%);
+}
+
 .planner-slot-badges {
   display: flex;
   flex-wrap: wrap;

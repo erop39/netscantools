@@ -1,4 +1,5 @@
 import type { NetworkPlan, PlanMatch, PlanSlot } from "../types";
+import { deviceIconSvgHtml } from "./deviceIconSvg";
 
 function esc(s: string | null | undefined): string {
   if (!s) return "";
@@ -61,6 +62,13 @@ export function buildPlanMapHtml(plan: NetworkPlan): string {
               )
               .join("");
 
+      const iconHtml = deviceIconSvgHtml(s.device_icon, 20);
+      const iconTitle = s.device_icon
+        ? esc(s.device_icon)
+        : s.device_mac
+          ? "No icon set"
+          : "Reserve";
+
       return `
       <article class="host ${esc(s.match)}">
         <div class="host-rail" aria-hidden="true">
@@ -73,6 +81,7 @@ export function buildPlanMapHtml(plan: NetworkPlan): string {
               <div class="ip-planned mono">${esc(s.planned_ip) || "—.—.—.—"}</div>
               <div class="ip-octet" title="Last octet">${esc(lastOctet(s.planned_ip))}</div>
             </div>
+            <div class="host-icon" title="${iconTitle}">${iconHtml}</div>
             <div class="host-meta">
               <h2 class="host-title">${esc(slotTitle(s))}</h2>
               <div class="host-sub">
@@ -222,6 +231,17 @@ export function buildPlanMapHtml(plan: NetworkPlan): string {
       display: flex; gap: 12px; align-items: flex-start;
       margin-bottom: 10px;
     }
+    .host-icon {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px;
+      color: #7dd3fc;
+      background: linear-gradient(145deg, rgba(56,189,248,.18), rgba(14,165,233,.1));
+      border: 1px solid rgba(125,211,252,.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .host-icon svg { display: block; }
     .ip-block {
       flex-shrink: 0;
       width: 118px;
@@ -293,14 +313,14 @@ export function buildPlanMapHtml(plan: NetworkPlan): string {
 
     @media print {
       body { background: #fff; color: #0f172a; }
-      .host-card, .ip-block, .stat, .notes, .port, .chip {
+      .host-card, .ip-block, .stat, .notes, .port, .chip, .host-icon {
         box-shadow: none !important;
         background: #f8fafc !important;
         border-color: #cbd5e1 !important;
         color: #0f172a !important;
       }
       .ip-planned, .host-title, .facts dd, .port b { color: #0f172a !important; }
-      .ip-octet, .brand, .host-index { color: #0369a1 !important; }
+      .ip-octet, .brand, .host-index, .host-icon { color: #0369a1 !important; }
       .ports-label, .facts dt, .muted, .subtitle, footer.page { color: #64748b !important; }
       .host-line { background: #cbd5e1 !important; }
       .badge-match { color: #047857 !important; background: #d1fae5 !important; }

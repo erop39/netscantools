@@ -177,7 +177,69 @@ export function iconLabel(key: string | null | undefined): string {
   return LABEL_BY_KEY[key as DeviceIconKey] ?? key;
 }
 
-/** Quick type chips → type label + icon */
+/**
+ * Icon key → equipment type stored on device.
+ * Selecting an icon always sets the matching type.
+ */
+export const ICON_TO_TYPE: Record<DeviceIconKey, string> = {
+  wifi: "ap",
+  router: "router",
+  sitemap: "switch",
+  ethernet: "ethernet",
+  broadcast: "broadcast",
+  globe: "network",
+  cloud: "cloud",
+  satellite: "satellite",
+  bluetooth: "bluetooth",
+  server: "server",
+  database: "database",
+  hdd: "nas",
+  desktop: "pc",
+  laptop: "laptop",
+  tablet: "tablet",
+  mobile: "phone",
+  phone: "phone",
+  camera: "camera",
+  video: "nvr",
+  tv: "tv",
+  print: "printer",
+  fax: "fax",
+  headphones: "audio",
+  gamepad: "console",
+  microchip: "iot",
+  plug: "plug",
+  power: "ups",
+  lightbulb: "light",
+  thermometer: "sensor",
+  home: "home",
+  shield: "security",
+  key: "access",
+  cogs: "appliance",
+  bell: "alert",
+  folder: "storage",
+  box: "other",
+  car: "vehicle",
+  usb: "usb",
+  question: "other",
+  iphone: "iphone",
+  ipad: "ipad",
+  mac: "mac",
+  appletv: "appletv",
+  applewatch: "watch",
+  airpods: "airpods",
+  android: "android",
+  androidtv: "androidtv",
+  fridge: "fridge",
+  oven: "oven",
+  microwave: "microwave",
+  dishwasher: "dishwasher",
+  kettle: "kettle",
+  coffee: "coffee",
+  blender: "blender",
+  washing: "washing",
+};
+
+/** Quick type chips → type label + icon (also drives iconFromType). */
 export const TYPE_PRESETS: { type: string; icon: DeviceIconKey; label: string }[] = [
   { type: "router", icon: "router", label: "Router" },
   { type: "switch", icon: "sitemap", label: "Switch" },
@@ -194,15 +256,41 @@ export const TYPE_PRESETS: { type: string; icon: DeviceIconKey; label: string }[
   { type: "ipad", icon: "ipad", label: "iPad" },
   { type: "android", icon: "android", label: "Android" },
   { type: "phone", icon: "mobile", label: "Phone" },
+  { type: "tablet", icon: "tablet", label: "Tablet" },
   { type: "tv", icon: "tv", label: "TV" },
   { type: "appletv", icon: "appletv", label: "Apple TV" },
   { type: "androidtv", icon: "androidtv", label: "Android TV" },
   { type: "watch", icon: "applewatch", label: "Watch" },
+  { type: "airpods", icon: "airpods", label: "AirPods" },
   { type: "iot", icon: "microchip", label: "IoT" },
-  { type: "kitchen", icon: "fridge", label: "Kitchen" },
+  { type: "fridge", icon: "fridge", label: "Fridge" },
+  { type: "oven", icon: "oven", label: "Oven" },
+  { type: "microwave", icon: "microwave", label: "Microwave" },
+  { type: "dishwasher", icon: "dishwasher", label: "Dishwasher" },
+  { type: "kettle", icon: "kettle", label: "Kettle" },
+  { type: "coffee", icon: "coffee", label: "Coffee" },
+  { type: "washing", icon: "washing", label: "Washer" },
+  { type: "console", icon: "gamepad", label: "Console" },
   { type: "ups", icon: "power", label: "UPS" },
   { type: "other", icon: "box", label: "Other" },
 ];
+
+/** Resolve equipment type from an icon key (null → clear type). */
+export function typeFromIcon(icon: string | null | undefined): string | null {
+  if (!icon) return null;
+  return ICON_TO_TYPE[icon as DeviceIconKey] ?? icon;
+}
+
+/** Prefer TYPE_PRESETS, else reverse ICON_TO_TYPE. */
+export function iconFromType(type: string | null | undefined): DeviceIconKey | null {
+  if (!type) return null;
+  const preset = TYPE_PRESETS.find((p) => p.type === type);
+  if (preset) return preset.icon;
+  const entry = (Object.entries(ICON_TO_TYPE) as [DeviceIconKey, string][]).find(
+    ([, t]) => t === type,
+  );
+  return entry?.[0] ?? null;
+}
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 

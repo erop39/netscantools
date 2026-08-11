@@ -125,6 +125,8 @@ export interface PlanSlot {
   live_ip: string | null;
   live_status: string | null;
   device_id: number | null;
+  /** Icon key from bound inventory device (null if reserve / unbound) */
+  device_icon: string | null;
   match: PlanMatch;
   ports: PlanPort[];
 }

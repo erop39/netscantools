@@ -15,6 +15,7 @@ import {
   PageHeader,
   SuccessBanner,
 } from "../components/ui";
+import { DeviceIcon, iconLabel } from "../lib/deviceIcons";
 import { downloadPlanMapHtml } from "../lib/exportPlanHtml";
 import type {
   NetworkPlan,
@@ -707,6 +708,22 @@ export function Planner() {
                         >
                           ↓
                         </button>
+                      </div>
+
+                      <div
+                        className={`device-avatar planner-slot-icon${
+                          slot.device_icon ? "" : " is-empty"
+                        }`}
+                        title={
+                          slot.device_icon
+                            ? iconLabel(slot.device_icon)
+                            : slot.device_mac
+                              ? "No icon set on device"
+                              : "Reserve · no device"
+                        }
+                        aria-hidden
+                      >
+                        <DeviceIcon name={slot.device_icon} size={16} />
                       </div>
 
                       <div className="planner-slot-badges">

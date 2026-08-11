@@ -190,6 +190,7 @@ def _slot_to_out(slot: PlanSlot, devices: dict[str, Device]) -> SlotOut:
     live_ip: str | None = None
     live_status: str | None = None
     device_id: int | None = None
+    device_icon: str | None = None
     if slot.device_mac:
         try:
             mac_key = normalize_mac(slot.device_mac)
@@ -200,6 +201,7 @@ def _slot_to_out(slot: PlanSlot, devices: dict[str, Device]) -> SlotOut:
             live_ip = device.ip
             live_status = device.status
             device_id = device.id
+            device_icon = device.icon
 
     ports_out = [
         PortOut(
@@ -222,6 +224,7 @@ def _slot_to_out(slot: PlanSlot, devices: dict[str, Device]) -> SlotOut:
         live_ip=live_ip,
         live_status=live_status,
         device_id=device_id,
+        device_icon=device_icon,
         match=_match_badge(slot.device_mac, slot.planned_ip, live_ip),
     )
 

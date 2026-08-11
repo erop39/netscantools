@@ -25,6 +25,7 @@ class SlotOut(BaseModel):
     live_ip: str | None = None
     live_status: str | None = None
     device_id: int | None = None
+    device_icon: str | None = None
     match: Literal["match", "mismatch", "linked-no-ip", "reserve"]
 
     model_config = {"from_attributes": True}

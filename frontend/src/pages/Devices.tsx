@@ -14,7 +14,7 @@ import {
 } from "../components/ui";
 import { DeviceIconTrigger } from "../components/DeviceIconTrigger";
 import { deviceLabel } from "../lib/deviceLabel";
-import type { DeviceIconKey } from "../lib/deviceIcons";
+import { typeFromIcon, type DeviceIconKey } from "../lib/deviceIcons";
 import { downloadHtmlReport, printPdfReport } from "../lib/exportReport";
 import { httpUrlForIp, openExternal } from "../lib/links";
 import type {
@@ -214,17 +214,21 @@ export function Devices() {
 
   async function onSetIcon(d: Device, icon: DeviceIconKey | null) {
     setBusyId(d.id);
+    const nextType = typeFromIcon(icon);
     try {
       const updated = await apiFetch<Device>(`/api/devices/${d.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ icon }),
+        // Icon and equipment type stay in sync
+        body: JSON.stringify({ icon, type: nextType }),
       });
       setDevices((list) => list.map((x) => (x.id === d.id ? updated : x)));
       setActionMsg((m) => ({
         ...m,
         [d.id]: {
           kind: "icon",
-          text: icon ? `Icon → ${icon}` : "Icon cleared",
+          text: icon
+            ? `Icon → ${icon}${nextType ? ` · type ${nextType}` : ""}`
+            : "Icon & type cleared",
           ok: true,
         },
       }));

@@ -18,7 +18,9 @@ import { deviceLabel } from "../lib/deviceLabel";
 import {
   DeviceIcon,
   TYPE_PRESETS,
+  iconFromType,
   iconLabel,
+  typeFromIcon,
   type DeviceIconKey,
 } from "../lib/deviceIcons";
 import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
@@ -230,6 +232,19 @@ export function DeviceDetail() {
     setIcon(p.icon);
   }
 
+  /** Icon pick always aligns type with equipment class. */
+  function onPickIcon(key: DeviceIconKey | null) {
+    setIcon(key);
+    setType(typeFromIcon(key) ?? "");
+  }
+
+  /** Free-text type: if it matches a known type, snap icon to it. */
+  function onTypeInput(value: string) {
+    setType(value);
+    const matched = iconFromType(value.trim());
+    if (matched) setIcon(matched);
+  }
+
   return (
     <div className="device-detail">
       <PageHeader
@@ -407,7 +422,7 @@ export function DeviceDetail() {
               <div className="device-field">
                 <span className="device-field-label">Type & icon</span>
                 <p className="device-field-hint device-field-hint--above">
-                  Pick a preset (sets type + icon). Override icon below if needed.
+                  Icon and type stay linked: pick a chip or an icon — both update together.
                 </p>
                 <div className="type-chip-grid">
                   {TYPE_PRESETS.map((p) => {
@@ -428,7 +443,7 @@ export function DeviceDetail() {
                 <input
                   type="text"
                   value={type}
-                  onChange={(e) => setType(e.target.value)}
+                  onChange={(e) => onTypeInput(e.target.value)}
                   placeholder="Custom type…"
                   className={`${fieldClassName} mt-2`}
                   aria-label="Custom device type"
@@ -440,7 +455,7 @@ export function DeviceDetail() {
                   </div>
                   <div className="device-icon-row-text">
                     <span className="device-icon-row-label">
-                      {icon ? iconLabel(icon) : "No custom icon"}
+                      {icon ? `${iconLabel(icon)}${type ? ` · ${type}` : ""}` : "No icon / type"}
                     </span>
                     <button
                       type="button"
@@ -448,7 +463,7 @@ export function DeviceDetail() {
                       onClick={() => setShowAllIcons((v) => !v)}
                       aria-expanded={showAllIcons}
                     >
-                      {showAllIcons ? "Hide icon picker" : "Choose other icon…"}
+                      {showAllIcons ? "Hide icon picker" : "Choose icon…"}
                     </button>
                   </div>
                 </div>
@@ -457,7 +472,7 @@ export function DeviceDetail() {
                   <div className="device-icon-picker-wrap">
                     <IconPicker
                       value={icon}
-                      onChange={(key: DeviceIconKey | null) => setIcon(key)}
+                      onChange={onPickIcon}
                     />
                   </div>
                 )}
