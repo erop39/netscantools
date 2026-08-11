@@ -11,11 +11,22 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.models.device import Device
 from app.models.scan import Scan
 from app.models.setting import Setting
-from app.services.device_diff import HostResult, apply_scan_results
+from app.services import nettools as nettools_mod
+from app.services import port_probe as port_probe_mod
+from app.services.device_diff import (
+    HostResult,
+    apply_scan_results,
+    normalize_mac,
+    update_device_probe_fields,
+)
 from app.services.nettools import resolve_hostnames
 from app.services.winconsole import decode_console, run_capture
+
+# Fallback when Settings has no quick_ports row yet (Task 6 adds default).
+_DEFAULT_QUICK_PORTS = "22,80,443,445,3389,8080,8443"
 
 _ARP_LINE_RE = re.compile(
     r"^\s*(\d{1,3}(?:\.\d{1,3}){3})\s+"
@@ -191,6 +202,58 @@ def run_scan_job(db: Session) -> Scan:
             arp_map = parse_arp_a(get_arp_table())
             hosts = _build_host_results(alive, arp_map, subnet)
             diff = apply_scan_results(db, hosts)
+
+            # Phase: quick ports + latency (per-host isolation)
+            quick_csv = _get_setting_value(db, "quick_ports", _DEFAULT_QUICK_PORTS)
+            scanned_ports = port_probe_mod.parse_port_csv(quick_csv)
+            for host in hosts:
+                if not host.ip:
+                    continue
+                try:
+                    mac = normalize_mac(host.mac)
+                except ValueError:
+                    continue
+                try:
+                    device = db.query(Device).filter(Device.mac == mac).first()
+                    if device is None:
+                        continue
+
+                    latency_ms: float | None = None
+                    ports_ok = False
+                    open_now: list[int] = []
+                    try:
+                        open_now = port_probe_mod.probe_host_ports(host.ip, scanned_ports)
+                        ports_ok = True
+                    except Exception:
+                        ports_ok = False
+
+                    try:
+                        pr = nettools_mod.ping_detail(host.ip, count=1, timeout_ms=800)
+                        if pr.ok and pr.rtt_ms is not None:
+                            latency_ms = float(pr.rtt_ms)
+                    except Exception:
+                        pass
+
+                    merged = None
+                    if ports_ok:
+                        merged = port_probe_mod.merge_open_ports(
+                            device.open_ports if isinstance(device.open_ports, list) else None,
+                            scanned_ports,
+                            open_now,
+                            "quick",
+                        )
+
+                    update_device_probe_fields(
+                        db,
+                        device,
+                        latency_ms,
+                        merged,
+                        ports_ok,
+                    )
+                except Exception:
+                    # One host must not abort the scan (no session rollback —
+                    # would discard prior hosts' probe updates in this phase).
+                    continue
 
             # apply_scan_results commits; re-bind scan on this session
             scan = db.query(Scan).filter(Scan.id == scan_id).one()

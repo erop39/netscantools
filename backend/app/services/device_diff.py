@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -30,6 +33,64 @@ def normalize_mac(mac: str) -> str:
     if len(parts) != 6:
         raise ValueError(f"Invalid MAC: {mac}")
     return ":".join(p.zfill(2) for p in parts)
+
+
+def _port_set(open_ports: list | None) -> set[int]:
+    ports: set[int] = set()
+    for entry in open_ports or []:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            ports.add(int(entry["port"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return ports
+
+
+def update_device_probe_fields(
+    db: Session,
+    device: Device,
+    latency_ms: float | None,
+    open_ports_merged: list[dict[str, Any]] | None,
+    ports_ok: bool,
+) -> None:
+    """Apply latency / merged open_ports to device; emit port_opened/closed; rescore.
+
+    When ``ports_ok`` is False, open_ports and ports_scanned_at are left unchanged
+    (probe error isolation). Caller is responsible for commit.
+    """
+    now = datetime.now(timezone.utc)
+
+    if latency_ms is not None:
+        device.latency_ms = float(latency_ms)
+        device.updated_at = now
+
+    if ports_ok and open_ports_merged is not None:
+        prev_ports = _port_set(device.open_ports if isinstance(device.open_ports, list) else None)
+        new_ports = _port_set(open_ports_merged)
+
+        for port in sorted(new_ports - prev_ports):
+            log_event_and_maybe_notify(
+                db,
+                device.id,
+                "port_opened",
+                f"Port {port} opened on {device.mac}",
+                details={"mac": device.mac, "port": port, "ip": device.ip},
+            )
+        for port in sorted(prev_ports - new_ports):
+            log_event(
+                db,
+                device.id,
+                "port_closed",
+                details={"mac": device.mac, "port": port, "ip": device.ip},
+            )
+
+        device.open_ports = open_ports_merged
+        device.ports_scanned_at = now
+        device.updated_at = now
+
+    score, _ = compute_device_score(device, now=now)
+    device.security_score = score
 
 
 def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
