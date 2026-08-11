@@ -85,14 +85,14 @@ export function Sidebar({ collapsed, onToggle }: Props) {
         <header className="sidebar-header">
           <div className="login-logo sidebar-logo">q</div>
           <div className="sidebar-brand">
-            <div className="sidebar-brand-title">qube.li</div>
-            <div className="sidebar-brand-sub">NetInventory</div>
+            <div className="sidebar-brand-title">eG::39</div>
+            <div className="sidebar-brand-sub">netscantools</div>
           </div>
         </header>
       )}
 
       {collapsed && (
-        <div className="sidebar-collapsed-logo" title="qube.li">
+        <div className="sidebar-collapsed-logo" title="eG::39">
           <div className="login-logo sidebar-logo">q</div>
         </div>
       )}

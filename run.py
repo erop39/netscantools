@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NetInventory single launcher — starts API + UI in one process/window.
+netscantools (eG::39) single launcher — starts API + UI in one process/window.
 
 Usage:
   python run.py
@@ -122,7 +122,7 @@ def wait_http(url: str, timeout: float = 60.0) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Start NetInventory (API + UI) in one window")
+    parser = argparse.ArgumentParser(description="Start netscantools (API + UI) in one window")
     parser.add_argument("--api-port", type=int, default=8000)
     parser.add_argument("--ui-port", type=int, default=5173)
     parser.add_argument("--no-browser", action="store_true")
@@ -130,7 +130,7 @@ def main() -> int:
     args = parser.parse_args()
 
     print()
-    print(c("  NetInventory (qube.li)", "bold"))
+    print(c("  netscantools (eG::39)", "bold"))
     print(c("  Single launcher — API + UI", "dim"))
     print()
 

@@ -1,4 +1,4 @@
-# NetInventory (qube.li)
+# netscantools (eG::39)
 
 See [docs/README.md](docs/README.md) for product docs.
 

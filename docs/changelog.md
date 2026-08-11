@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to NetInventory (qube.li / netPad) are documented in this file.
+All notable changes to netscantools (eG::39 / netPad) are documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).  
 Versioning follows [Semantic Versioning](https://semver.org/).
@@ -11,6 +11,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
+
+## [0.5.2] — 2026-08-11
+
+### Changed
+
+- Brand rename: **qube.li** → **eG::39**, **NetInventory** → **netscantools**
+- Settings: removed duplicate Network scan defaults block (scan config only on Scans page)
 
 ## [0.5.1] — 2026-08-11
 

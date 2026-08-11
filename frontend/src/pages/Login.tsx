@@ -69,8 +69,8 @@ export function Login() {
       <div className="login-card">
         <div className="mb-8 text-center">
           <div className="login-logo">q</div>
-          <h1 className="text-xl font-semibold tracking-tight text-white">qube.li</h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">NetInventory · sign in</p>
+          <h1 className="text-xl font-semibold tracking-tight text-white">eG::39</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">netscantools · sign in</p>
         </div>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">

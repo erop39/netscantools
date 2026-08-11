@@ -14,7 +14,7 @@ from app.services.auth import ensure_admin_user, ensure_default_settings
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 settings = get_settings()
-app = FastAPI(title="NetInventory", version="0.1.0")
+app = FastAPI(title="netscantools", version="0.5.1")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,

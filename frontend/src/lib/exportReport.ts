@@ -62,7 +62,7 @@ export function buildInventoryHtml(devices: Device[]): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NetInventory — Device Report</title>
+  <title>netscantools — Device Report</title>
   <style>
     :root {
       --bg: #0a1628;
@@ -159,7 +159,7 @@ export function buildInventoryHtml(devices: Device[]): string {
   <div class="wrap">
     <header>
       <div>
-        <div class="brand">qube.li · NetInventory</div>
+        <div class="brand">eG::39 · netscantools</div>
         <h1>Device inventory report</h1>
       </div>
       <div class="meta">
@@ -192,7 +192,7 @@ export function buildInventoryHtml(devices: Device[]): string {
         </tbody>
       </table>
     </div>
-    <footer>NetInventory export · open LAN / Ext / HTTP links to device web interfaces</footer>
+    <footer>netscantools export · open LAN / Ext / HTTP links to device web interfaces</footer>
   </div>
 </body>
 </html>`;
@@ -205,7 +205,7 @@ export function downloadHtmlReport(devices: Device[], filename?: string) {
   const a = document.createElement("a");
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
   a.href = url;
-  a.download = filename || `netinventory-devices-${stamp}.html`;
+  a.download = filename || `netscantools-devices-${stamp}.html`;
   document.body.appendChild(a);
   a.click();
   a.remove();

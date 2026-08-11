@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
-import { Link } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
 import {
   btnPrimaryClassName,
@@ -23,7 +22,7 @@ const PRESETS: {
   {
     id: "default",
     label: "Night landscape",
-    hint: "Atmospheric photo (qube.li style)",
+    hint: "Atmospheric night landscape",
     previewStyle: {
       backgroundImage:
         "linear-gradient(180deg, rgb(2 10 24 / 30%), rgb(2 12 28 / 40%)), url(/bg.jpg)",
@@ -287,7 +286,7 @@ export function Settings() {
     <div className="settings-stack">
       <PageHeader
         title="Settings"
-        description="Account, appearance and scan defaults"
+        description="Account and appearance"
       />
 
       {loading && <LoadingState label="Loading settings…" />}
@@ -380,8 +379,7 @@ export function Settings() {
           <GlassCard className="!p-6">
             <h2 className="mb-1 text-sm font-semibold text-white/95">Appearance</h2>
             <p className="mb-4 text-xs text-white/50">
-              Background behind the glass UI. Changes apply immediately; click Save to persist with
-              scan settings.
+              Background behind the glass UI. Preview applies immediately; click Save to persist.
             </p>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -432,62 +430,6 @@ export function Settings() {
                 </button>
               )}
               <span className="text-xs text-white/40">JPEG / PNG / WebP / GIF, max 8 MB</span>
-            </div>
-          </GlassCard>
-
-          <GlassCard className="!p-6">
-            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-semibold text-white/95">Network scan defaults</h2>
-                <p className="mt-1 text-xs text-white/50">
-                  Primary controls live on the{" "}
-                  <Link to="/scans" className="text-sky-300/90 hover:text-sky-200">
-                    Scans
-                  </Link>{" "}
-                  page — subnet, start scan, and history.
-                </p>
-              </div>
-              <Link to="/scans" className={btnSecondaryClassName}>
-                Open Scans →
-              </Link>
-            </div>
-            <div className="flex flex-col gap-4">
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Scan subnet (CIDR)
-                <input
-                  type="text"
-                  value={scanSubnet}
-                  onChange={(e) => setScanSubnet(e.target.value)}
-                  placeholder="192.168.1.0/24"
-                  required
-                  className={fieldClassName}
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Scan interval (minutes)
-                <input
-                  type="number"
-                  min={0}
-                  value={scanInterval}
-                  onChange={(e) => setScanInterval(Number(e.target.value))}
-                  required
-                  className={fieldClassName}
-                />
-                <span className="text-xs text-white/45">0 disables auto-scan</span>
-              </label>
-
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Scan ports
-                <input
-                  type="text"
-                  value={scanPorts}
-                  onChange={(e) => setScanPorts(e.target.value)}
-                  placeholder="80,443,8080"
-                  required
-                  className={fieldClassName}
-                />
-              </label>
             </div>
           </GlassCard>
 
