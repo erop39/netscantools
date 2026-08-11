@@ -1998,6 +1998,133 @@ select.glass-input {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
 }
 
+button.device-avatar--btn {
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.12s ease;
+}
+
+button.device-avatar--btn:hover:not(:disabled) {
+  border-color: rgb(125 211 252 / 45%);
+  background: linear-gradient(145deg, rgb(56 189 248 / 28%), rgb(14 165 233 / 16%));
+  transform: scale(1.04);
+}
+
+button.device-avatar--btn.is-open {
+  border-color: rgb(56 189 248 / 55%);
+  box-shadow: 0 0 0 2px rgb(56 189 248 / 22%);
+}
+
+button.device-avatar--btn:disabled,
+button.device-avatar--btn.is-busy {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.device-icon-trigger {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.device-icon-popover {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  background: #0c1e36;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 55%);
+  overflow: hidden;
+  color: #f1f5f9;
+}
+
+.device-icon-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  background: #091628;
+}
+
+.device-icon-popover-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(224 242 254 / 92%);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-icon-popover-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.device-icon-popover-clear,
+.device-icon-popover-close {
+  border: none;
+  background: transparent;
+  color: rgb(160 185 210 / 75%);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.device-icon-popover-close {
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.device-icon-popover-clear:hover,
+.device-icon-popover-close:hover {
+  color: #e0f2fe;
+  background: rgb(255 255 255 / 8%);
+}
+
+.device-icon-popover-body {
+  overflow: hidden;
+  max-height: 300px;
+}
+
+.device-icon-popover-body .icon-picker {
+  gap: 0;
+}
+
+.device-icon-popover-body .icon-picker-body {
+  max-height: 300px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 8px 10px;
+}
+
+.icon-picker.is-compact .icon-picker-grid {
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.icon-picker.is-compact .icon-picker-item {
+  border-radius: 7px;
+}
+
+.icon-picker.is-compact .icon-picker-group-label {
+  margin-bottom: 4px;
+  font-size: 9px;
+}
+
 /* Type presets — fixed grid, not chaotic wrap */
 .type-chip-grid {
   display: grid;

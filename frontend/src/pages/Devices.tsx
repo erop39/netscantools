@@ -12,8 +12,9 @@ import {
   PageHeader,
   StatusBadge,
 } from "../components/ui";
+import { DeviceIconTrigger } from "../components/DeviceIconTrigger";
 import { deviceLabel } from "../lib/deviceLabel";
-import { DeviceIcon } from "../lib/deviceIcons";
+import type { DeviceIconKey } from "../lib/deviceIcons";
 import { downloadHtmlReport, printPdfReport } from "../lib/exportReport";
 import { httpUrlForIp, openExternal } from "../lib/links";
 import type {
@@ -23,7 +24,7 @@ import type {
   ResolveResult,
 } from "../types";
 
-type ActionState = { kind: "ping" | "resolve" | "rename"; text: string; ok?: boolean };
+type ActionState = { kind: "ping" | "resolve" | "rename" | "icon"; text: string; ok?: boolean };
 
 /** Compact square tool button for the actions column */
 function ToolBtn({
@@ -211,6 +212,37 @@ export function Devices() {
     }
   }
 
+  async function onSetIcon(d: Device, icon: DeviceIconKey | null) {
+    setBusyId(d.id);
+    try {
+      const updated = await apiFetch<Device>(`/api/devices/${d.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ icon }),
+      });
+      setDevices((list) => list.map((x) => (x.id === d.id ? updated : x)));
+      setActionMsg((m) => ({
+        ...m,
+        [d.id]: {
+          kind: "icon",
+          text: icon ? `Icon → ${icon}` : "Icon cleared",
+          ok: true,
+        },
+      }));
+    } catch (err) {
+      setActionMsg((m) => ({
+        ...m,
+        [d.id]: {
+          kind: "icon",
+          text: err instanceof ApiError ? `Icon update failed (${err.status})` : "Icon update failed",
+          ok: false,
+        },
+      }));
+      throw err;
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   function primaryOpenUrl(d: Device): string | null {
     return d.web_ui_local || d.web_ui_external || httpUrlForIp(d.ip);
   }
@@ -383,9 +415,12 @@ export function Devices() {
                           </div>
                         ) : (
                           <div className="devices-identity">
-                            <div className="device-avatar" aria-hidden>
-                              <DeviceIcon name={d.icon} size={18} />
-                            </div>
+                            <DeviceIconTrigger
+                              value={d.icon}
+                              size={18}
+                              disabled={busy}
+                              onChange={(icon) => onSetIcon(d, icon)}
+                            />
                             <div className="devices-identity-text">
                               <Link to={`/devices/${d.id}`} className="devices-name">
                                 {deviceLabel(d)}

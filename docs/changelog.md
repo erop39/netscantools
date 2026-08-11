@@ -12,6 +12,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.7.4] — 2026-08-11
+
+### Added
+
+- Device icons: Apple (iPhone, iPad, Mac, Apple TV, Watch, AirPods), Android / Android TV, kitchen appliances
+- Devices list: click avatar to pick icon (popover) without opening detail
+
 ## [0.7.3] — 2026-08-11
 
 ### Fixed

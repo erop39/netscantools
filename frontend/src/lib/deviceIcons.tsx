@@ -43,7 +43,26 @@ export type DeviceIconKey =
   | "folder"
   | "box"
   | "car"
-  | "question";
+  | "question"
+  /* Apple ecosystem */
+  | "iphone"
+  | "ipad"
+  | "mac"
+  | "appletv"
+  | "applewatch"
+  | "airpods"
+  /* Android / other mobile */
+  | "android"
+  | "androidtv"
+  /* Kitchen appliances */
+  | "fridge"
+  | "oven"
+  | "microwave"
+  | "dishwasher"
+  | "kettle"
+  | "coffee"
+  | "blender"
+  | "washing";
 
 export type IconGroup = {
   id: string;
@@ -51,7 +70,7 @@ export type IconGroup = {
   keys: DeviceIconKey[];
 };
 
-/** Ordered groups for the picker — not a flat dump of 40 icons */
+/** Ordered groups for the picker */
 export const ICON_GROUPS: IconGroup[] = [
   {
     id: "network",
@@ -59,14 +78,29 @@ export const ICON_GROUPS: IconGroup[] = [
     keys: ["wifi", "router", "sitemap", "ethernet", "broadcast", "globe", "cloud", "satellite", "bluetooth"],
   },
   {
+    id: "apple",
+    label: "Apple",
+    keys: ["iphone", "ipad", "mac", "appletv", "applewatch", "airpods"],
+  },
+  {
+    id: "android",
+    label: "Android & mobile",
+    keys: ["android", "androidtv", "mobile", "phone", "tablet"],
+  },
+  {
     id: "compute",
     label: "Compute & storage",
-    keys: ["desktop", "laptop", "tablet", "mobile", "phone", "server", "database", "hdd", "folder", "box"],
+    keys: ["desktop", "laptop", "server", "database", "hdd", "folder", "box"],
   },
   {
     id: "media",
     label: "Media & office",
     keys: ["camera", "video", "tv", "print", "headphones", "gamepad", "fax"],
+  },
+  {
+    id: "kitchen",
+    label: "Kitchen",
+    keys: ["fridge", "oven", "microwave", "dishwasher", "kettle", "coffee", "blender", "washing"],
   },
   {
     id: "home",
@@ -115,6 +149,22 @@ export const DEVICE_ICONS: { key: DeviceIconKey; label: string }[] = [
   { key: "car", label: "Vehicle" },
   { key: "fax", label: "Fax" },
   { key: "question", label: "Unknown" },
+  { key: "iphone", label: "iPhone" },
+  { key: "ipad", label: "iPad" },
+  { key: "mac", label: "Mac / macOS" },
+  { key: "appletv", label: "Apple TV" },
+  { key: "applewatch", label: "Apple Watch" },
+  { key: "airpods", label: "AirPods" },
+  { key: "android", label: "Android phone" },
+  { key: "androidtv", label: "Android TV" },
+  { key: "fridge", label: "Fridge" },
+  { key: "oven", label: "Oven" },
+  { key: "microwave", label: "Microwave" },
+  { key: "dishwasher", label: "Dishwasher" },
+  { key: "kettle", label: "Kettle" },
+  { key: "coffee", label: "Coffee machine" },
+  { key: "blender", label: "Blender" },
+  { key: "washing", label: "Washing machine" },
 ];
 
 const LABEL_BY_KEY = Object.fromEntries(DEVICE_ICONS.map((i) => [i.key, i.label])) as Record<
@@ -139,9 +189,17 @@ export const TYPE_PRESETS: { type: string; icon: DeviceIconKey; label: string }[
   { type: "printer", icon: "print", label: "Printer" },
   { type: "pc", icon: "desktop", label: "PC" },
   { type: "laptop", icon: "laptop", label: "Laptop" },
+  { type: "mac", icon: "mac", label: "Mac" },
+  { type: "iphone", icon: "iphone", label: "iPhone" },
+  { type: "ipad", icon: "ipad", label: "iPad" },
+  { type: "android", icon: "android", label: "Android" },
   { type: "phone", icon: "mobile", label: "Phone" },
   { type: "tv", icon: "tv", label: "TV" },
+  { type: "appletv", icon: "appletv", label: "Apple TV" },
+  { type: "androidtv", icon: "androidtv", label: "Android TV" },
+  { type: "watch", icon: "applewatch", label: "Watch" },
   { type: "iot", icon: "microchip", label: "IoT" },
+  { type: "kitchen", icon: "fridge", label: "Kitchen" },
   { type: "ups", icon: "power", label: "UPS" },
   { type: "other", icon: "box", label: "Other" },
 ];
@@ -380,6 +438,125 @@ const paths: Record<DeviceIconKey, ReactNode> = {
       <circle cx="12" cy="12" r="9" />
       <path d="M9.5 9.5a2.5 2.5 0 1 1 3.7 2.2c-.7.5-1.2 1-1.2 2V14.5" />
       <path d="M12 17.5h.01" />
+    </>
+  ),
+  /* Apple */
+  iphone: (
+    <>
+      <rect x="7" y="2" width="10" height="20" rx="2.5" />
+      <path d="M11 18h2" />
+      <path d="M10 5h4" />
+    </>
+  ),
+  ipad: (
+    <>
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M11 18h2" />
+    </>
+  ),
+  mac: (
+    <>
+      <rect x="2" y="4" width="20" height="13" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+      <path d="M9 9h.01M12 9h.01M15 9h.01" />
+    </>
+  ),
+  appletv: (
+    <>
+      <rect x="2" y="5" width="20" height="12" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+      <path d="M9 10.5a3 3 0 0 0 3 3 3 3 0 0 0 3-3" />
+    </>
+  ),
+  applewatch: (
+    <>
+      <rect x="7" y="6" width="10" height="12" rx="2.5" />
+      <path d="M9 6V3.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V6" />
+      <path d="M9 18v2.5a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V18" />
+      <circle cx="12" cy="12" r="2" />
+    </>
+  ),
+  airpods: (
+    <>
+      <path d="M7 10a3 3 0 0 1 3-3h0a2 2 0 0 1 2 2v8" />
+      <path d="M10 17a1.5 1.5 0 1 1-3 0" />
+      <path d="M17 10a3 3 0 0 0-3-3h0a2 2 0 0 0-2 2v8" />
+      <path d="M14 17a1.5 1.5 0 1 0 3 0" />
+    </>
+  ),
+  /* Android */
+  android: (
+    <>
+      <path d="M8 9a4 4 0 0 1 8 0v7a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2z" />
+      <path d="M9 4 7.5 6.5M15 4l1.5 2.5" />
+      <path d="M6 11v5M18 11v5" />
+      <path d="M10 18v2M14 18v2" />
+    </>
+  ),
+  androidtv: (
+    <>
+      <rect x="2" y="5" width="20" height="12" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+      <path d="M9 9h6v4H9z" />
+    </>
+  ),
+  /* Kitchen */
+  fridge: (
+    <>
+      <rect x="6" y="2" width="12" height="20" rx="1.5" />
+      <path d="M6 10h12" />
+      <path d="M9 6v2M9 13v3" />
+    </>
+  ),
+  oven: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <rect x="7" y="9" width="10" height="8" rx="1" />
+      <path d="M7 7h.01M10 7h.01M13 7h.01" />
+    </>
+  ),
+  microwave: (
+    <>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <rect x="5" y="9" width="10" height="6" rx="1" />
+      <path d="M17 10h2M17 13h2" />
+    </>
+  ),
+  dishwasher: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <circle cx="12" cy="13" r="4" />
+      <path d="M8 7h8" />
+    </>
+  ),
+  kettle: (
+    <>
+      <path d="M7 10h9a1 1 0 0 1 1 1v5a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-5a1 1 0 0 1 1-1z" />
+      <path d="M17 12h2a2 2 0 0 1 0 4h-2" />
+      <path d="M9 7V5a2 2 0 0 1 2-2h2" />
+    </>
+  ),
+  coffee: (
+    <>
+      <path d="M6 9h10v5a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z" />
+      <path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16" />
+      <path d="M8 4c.5 1 .5 2 0 3M11 4c.5 1 .5 2 0 3" />
+      <path d="M5 21h12" />
+    </>
+  ),
+  blender: (
+    <>
+      <path d="M8 4h8l1 7H7z" />
+      <rect x="8" y="11" width="8" height="7" rx="1" />
+      <path d="M7 21h10M10 18v3M14 18v3" />
+    </>
+  ),
+  washing: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <circle cx="12" cy="13" r="4.5" />
+      <circle cx="12" cy="13" r="2" />
+      <path d="M8 6h.01M11 6h3" />
     </>
   ),
 };

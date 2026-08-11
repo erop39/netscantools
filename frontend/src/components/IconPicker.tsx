@@ -9,29 +9,35 @@ import {
 type Props = {
   value: string | null;
   onChange: (icon: DeviceIconKey | null) => void;
+  /** Compact popover mode: denser grid, optional hide chrome */
+  compact?: boolean;
+  /** Hide title/clear row (e.g. when used inside popover with own header) */
+  hideHeader?: boolean;
 };
 
-export function IconPicker({ value, onChange }: Props) {
+export function IconPicker({ value, onChange, compact = false, hideHeader = false }: Props) {
   const selectedLabel = value ? iconLabel(value) : null;
 
   return (
-    <div className="icon-picker">
-      <div className="icon-picker-head">
-        <span className="icon-picker-title">Icon</span>
-        <div className="icon-picker-head-actions">
-          {selectedLabel && (
-            <span className="icon-picker-selected" title={value ?? undefined}>
-              <DeviceIcon name={value} size={14} />
-              {selectedLabel}
-            </span>
-          )}
-          {value && (
-            <button type="button" className="icon-picker-clear" onClick={() => onChange(null)}>
-              Clear
-            </button>
-          )}
+    <div className={`icon-picker ${compact ? "is-compact" : ""}`}>
+      {!hideHeader && (
+        <div className="icon-picker-head">
+          <span className="icon-picker-title">Icon</span>
+          <div className="icon-picker-head-actions">
+            {selectedLabel && (
+              <span className="icon-picker-selected" title={value ?? undefined}>
+                <DeviceIcon name={value} size={14} />
+                {selectedLabel}
+              </span>
+            )}
+            {value && (
+              <button type="button" className="icon-picker-clear" onClick={() => onChange(null)}>
+                Clear
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="icon-picker-body">
         {ICON_GROUPS.map((group) => (
@@ -52,7 +58,7 @@ export function IconPicker({ value, onChange }: Props) {
                     className={`icon-picker-item ${selected ? "is-selected" : ""}`}
                     onClick={() => onChange(key)}
                   >
-                    <DeviceIcon name={key} size={18} />
+                    <DeviceIcon name={key} size={compact ? 16 : 18} />
                   </button>
                 );
               })}

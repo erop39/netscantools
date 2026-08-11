@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, field_validator
 
 
-# Allowed icon keys (Semantic UI–inspired names for network gear)
+# Allowed icon keys — keep in sync with frontend/src/lib/deviceIcons.tsx
 DEVICE_ICON_KEYS = frozenset(
     {
         "desktop",
@@ -45,6 +45,25 @@ DEVICE_ICON_KEYS = frozenset(
         "box",
         "car",
         "question",
+        # Apple
+        "iphone",
+        "ipad",
+        "mac",
+        "appletv",
+        "applewatch",
+        "airpods",
+        # Android
+        "android",
+        "androidtv",
+        # Kitchen
+        "fridge",
+        "oven",
+        "microwave",
+        "dishwasher",
+        "kettle",
+        "coffee",
+        "blender",
+        "washing",
     }
 )
 
