@@ -75,6 +75,13 @@ export function Settings() {
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>("/bg.jpg");
   const [hasCustom, setHasCustom] = useState(false);
 
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwdSaving, setPwdSaving] = useState(false);
+  const [pwdError, setPwdError] = useState<string | null>(null);
+  const [pwdSuccess, setPwdSuccess] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -188,6 +195,22 @@ export function Settings() {
     }
   }
 
+  function parseApiDetail(err: unknown, fallback: string): string {
+    if (!(err instanceof ApiError)) return fallback;
+    try {
+      const parsed = JSON.parse(err.message) as {
+        detail?: string | { msg?: string }[];
+      };
+      if (typeof parsed.detail === "string") return parsed.detail;
+      if (Array.isArray(parsed.detail) && parsed.detail[0]?.msg) {
+        return parsed.detail.map((d) => d.msg).join("; ");
+      }
+    } catch {
+      /* raw */
+    }
+    return `${fallback} (${err.status})`;
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -209,26 +232,41 @@ export function Settings() {
       applyLocal(updated.ui_background, updated.ui_background_url);
       setSuccess("Settings saved");
     } catch (err) {
-      let message = "Save failed";
-      if (err instanceof ApiError) {
-        try {
-          const parsed = JSON.parse(err.message) as {
-            detail?: string | { msg?: string }[];
-          };
-          if (typeof parsed.detail === "string") {
-            message = parsed.detail;
-          } else if (Array.isArray(parsed.detail) && parsed.detail[0]?.msg) {
-            message = parsed.detail.map((d) => d.msg).join("; ");
-          } else {
-            message = `Save failed (${err.status}): ${err.message}`;
-          }
-        } catch {
-          message = `Save failed (${err.status}): ${err.message}`;
-        }
-      }
-      setError(message);
+      setError(parseApiDetail(err, "Save failed"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onChangePassword(e: FormEvent) {
+    e.preventDefault();
+    setPwdError(null);
+    setPwdSuccess(null);
+    if (newPassword !== confirmPassword) {
+      setPwdError("New passwords do not match");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPwdError("New password must be at least 6 characters");
+      return;
+    }
+    setPwdSaving(true);
+    try {
+      await apiFetch<{ status: string }>("/api/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPwdSuccess("Password changed successfully");
+    } catch (err) {
+      setPwdError(parseApiDetail(err, "Password change failed"));
+    } finally {
+      setPwdSaving(false);
     }
   }
 
@@ -267,7 +305,67 @@ export function Settings() {
       )}
 
       {!loading && (
-        <form onSubmit={onSubmit} className="flex max-w-2xl flex-col gap-6">
+        <div className="flex max-w-2xl flex-col gap-6">
+          <GlassCard>
+            <h2 className="mb-1 text-sm font-semibold text-white/95">Account</h2>
+            <p className="mb-4 text-xs text-white/50">Change your login password</p>
+            <form onSubmit={onChangePassword} className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Current password
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  className={fieldClassName}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                New password
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className={fieldClassName}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Confirm new password
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className={fieldClassName}
+                />
+              </label>
+              {pwdError && (
+                <div className="banner banner-error" role="alert">
+                  {pwdError}
+                </div>
+              )}
+              {pwdSuccess && (
+                <div className="banner banner-success" role="status">
+                  {pwdSuccess}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={pwdSaving}
+                className={`${btnPrimaryClassName} mt-1 w-fit`}
+              >
+                {pwdSaving ? "Updating…" : "Change password"}
+              </button>
+            </form>
+          </GlassCard>
+
+          <form onSubmit={onSubmit} className="flex flex-col gap-6">
           <GlassCard>
             <h2 className="mb-1 text-sm font-medium text-white/90">Appearance</h2>
             <p className="mb-4 text-xs text-white/50">
@@ -385,7 +483,8 @@ export function Settings() {
           <button type="submit" disabled={saving} className={`${btnPrimaryClassName} w-fit`}>
             {saving ? "Saving…" : "Save settings"}
           </button>
-        </form>
+          </form>
+        </div>
       )}
     </div>
   );

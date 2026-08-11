@@ -86,3 +86,28 @@ export function IconMenu(props: IconProps) {
     </svg>
   );
 }
+
+export function IconPanelLeft(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+    </svg>
+  );
+}
+
+export function IconChevronLeft(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m14 6-6 6 6 6" />
+    </svg>
+  );
+}
+
+export function IconChevronRight(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m10 6 6 6-6 6" />
+    </svg>
+  );
+}

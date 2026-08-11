@@ -4,10 +4,11 @@ import { apiFetch } from "../../api/client";
 import type { Notification } from "../../types";
 import {
   IconBell,
+  IconChevronLeft,
+  IconChevronRight,
   IconDevices,
   IconHome,
   IconLogout,
-  IconMenu,
   IconScans,
   IconSettings,
 } from "../icons";
@@ -27,7 +28,12 @@ const navItems: {
   { to: "/settings", label: "Settings", Icon: IconSettings },
 ];
 
-export function Sidebar() {
+type Props = {
+  collapsed: boolean;
+  onToggle: () => void;
+};
+
+export function Sidebar({ collapsed, onToggle }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const [unread, setUnread] = useState(0);
@@ -59,32 +65,44 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="glass-panel fixed top-5 left-5 bottom-8 z-20 flex w-[268px] flex-col p-3.5">
-      <header className="relative z-[1] mb-2 flex items-center gap-3 px-2.5 pb-4 pt-2">
-        <div className="login-logo !m-0 !h-10 !w-10 !rounded-[14px] !text-base !shadow-[0_6px_18px_rgb(14_165_233/35%)]">
-          q
+    <aside
+      className={`sidebar-shell glass-panel ${collapsed ? "is-collapsed" : ""}`}
+      data-collapsed={collapsed ? "true" : "false"}
+    >
+      <header className="sidebar-header">
+        <div className="login-logo sidebar-logo">q</div>
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-title">qube.li</div>
+          <div className="sidebar-brand-sub">NetInventory</div>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-semibold tracking-tight text-white">qube.li</div>
-          <div className="text-[11px] font-medium tracking-wide text-sky-200/55">
-            NetInventory
-          </div>
-        </div>
-        <IconMenu size={17} className="text-white/35" />
+        <button
+          type="button"
+          className="sidebar-toggle"
+          onClick={onToggle}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}
+        </button>
       </header>
 
-      <div className="relative z-[1] mx-1 mb-3 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+      <div className="sidebar-divider" />
 
-      <nav className="relative z-[1] flex flex-1 flex-col gap-1 px-0.5">
+      <nav className="sidebar-nav">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.end ?? false}
-            className={({ isActive }) => ["nav-item", isActive ? "is-active" : ""].join(" ")}
+            title={item.label}
+            className={({ isActive }) =>
+              ["nav-item", collapsed ? "is-icon-only" : "", isActive ? "is-active" : ""]
+                .filter(Boolean)
+                .join(" ")
+            }
           >
             <item.Icon size={19} className="nav-icon" />
-            <span className="flex-1">{item.label}</span>
+            <span className="nav-label">{item.label}</span>
             {item.to === "/notifications" && unread > 0 && (
               <span className="nav-badge">{unread > 99 ? "99+" : unread}</span>
             )}
@@ -92,11 +110,16 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="relative z-[1] mx-1 mt-2 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div className="sidebar-divider sidebar-divider-bottom" />
 
-      <button type="button" onClick={handleLogout} className="nav-item relative z-[1] mt-2 text-left">
+      <button
+        type="button"
+        onClick={handleLogout}
+        title="Log out"
+        className={`nav-item sidebar-logout ${collapsed ? "is-icon-only" : ""}`}
+      >
         <IconLogout size={19} className="nav-icon" />
-        <span>Log out</span>
+        <span className="nav-label">Log out</span>
       </button>
     </aside>
   );

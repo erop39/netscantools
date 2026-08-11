@@ -12,6 +12,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.5.0] — 2026-08-11
+
+### Added
+
+- Collapsible sidebar (icons-only mode, state persisted)
+- Change password in Settings → Account (`POST /api/auth/change-password`)
+
+### Fixed
+
+- Main content alignment with sidebar (no extra vertical shift; padding tracks expanded/collapsed width)
+
 ## [0.4.9] — 2026-08-11
 
 ### Added
