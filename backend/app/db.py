@@ -45,3 +45,11 @@ def ensure_schema() -> None:
             conn.execute(text("ALTER TABLE devices ADD COLUMN name VARCHAR(255)"))
         if "icon" not in col_names:
             conn.execute(text("ALTER TABLE devices ADD COLUMN icon VARCHAR(64)"))
+        for col, ddl in [
+            ("latency_ms", "ALTER TABLE devices ADD COLUMN latency_ms FLOAT"),
+            ("open_ports", "ALTER TABLE devices ADD COLUMN open_ports JSON"),
+            ("ports_scanned_at", "ALTER TABLE devices ADD COLUMN ports_scanned_at DATETIME"),
+            ("security_score", "ALTER TABLE devices ADD COLUMN security_score INTEGER"),
+        ]:
+            if col not in col_names:
+                conn.execute(text(ddl))
