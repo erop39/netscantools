@@ -12,6 +12,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.7.0] — 2026-08-11
+
+### Added
+
+- **Planner** tab: singleton network plan, ordered slots (planned IP, MAC bind, reserves),
+  ports (port + label), live vs planned, JSON export/import replace
+
 ## [0.6.1] — 2026-08-11
 
 ### Changed
