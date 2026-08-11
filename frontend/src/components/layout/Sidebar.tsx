@@ -68,6 +68,7 @@ export function Sidebar({ collapsed, onToggle }: Props) {
     <aside
       className={`sidebar-shell glass-panel ${collapsed ? "is-collapsed" : ""}`}
       data-collapsed={collapsed ? "true" : "false"}
+      aria-label="Main navigation"
     >
       {/* Edge toggle — not a nav item */}
       <button
@@ -83,7 +84,13 @@ export function Sidebar({ collapsed, onToggle }: Props) {
 
       {!collapsed && (
         <header className="sidebar-header">
-          <div className="login-logo sidebar-logo">q</div>
+          <img
+            className="login-logo sidebar-logo"
+            src="/icon.png"
+            alt=""
+            width={40}
+            height={40}
+          />
           <div className="sidebar-brand">
             <div className="sidebar-brand-title">eG::39</div>
             <div className="sidebar-brand-sub">netscantools</div>
@@ -93,7 +100,13 @@ export function Sidebar({ collapsed, onToggle }: Props) {
 
       {collapsed && (
         <div className="sidebar-collapsed-logo" title="eG::39">
-          <div className="login-logo sidebar-logo">q</div>
+          <img
+            className="login-logo sidebar-logo"
+            src="/icon.png"
+            alt="eG::39"
+            width={40}
+            height={40}
+          />
         </div>
       )}
 

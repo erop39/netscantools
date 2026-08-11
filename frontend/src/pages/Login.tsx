@@ -53,10 +53,10 @@ export function Login() {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center gap-3 text-[var(--text-muted)]">
-        <span className="spinner" />
+      <main className="flex min-h-screen items-center justify-center gap-3 text-[var(--text-muted)]" aria-busy="true">
+        <span className="spinner" aria-hidden />
         <span className="text-sm">Loading…</span>
-      </div>
+      </main>
     );
   }
 
@@ -65,15 +65,15 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="login-card">
         <div className="mb-8 text-center">
-          <div className="login-logo">q</div>
+          <img className="login-logo" src="/icon.png" alt="eG::39 netscantools" width={52} height={52} />
           <h1 className="text-xl font-semibold tracking-tight text-white">eG::39</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">netscantools · sign in</p>
         </div>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-label="Sign in">
           <label className="flex flex-col gap-1.5 text-[12.5px] font-medium text-[var(--text-muted)]">
             Username
             <input
@@ -116,6 +116,6 @@ export function Login() {
           </button>
         </form>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
+import { DarkSelect } from "../components/DarkSelect";
 import {
   btnPrimaryClassName,
   btnSecondaryClassName,
@@ -14,7 +15,7 @@ import {
 import { deviceLabel } from "../lib/deviceLabel";
 import { DeviceIcon } from "../lib/deviceIcons";
 import { downloadHtmlReport, printPdfReport } from "../lib/exportReport";
-import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
+import { httpUrlForIp, openExternal } from "../lib/links";
 import type {
   Device,
   PingResult,
@@ -23,6 +24,34 @@ import type {
 } from "../types";
 
 type ActionState = { kind: "ping" | "resolve" | "rename"; text: string; ok?: boolean };
+
+/** Compact square tool button for the actions column */
+function ToolBtn({
+  label,
+  title,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  title?: string;
+  disabled?: boolean;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className="dev-tool-btn"
+      title={title ?? label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function Devices() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -182,27 +211,17 @@ export function Devices() {
     }
   }
 
-  function onExportHtml() {
-    downloadHtmlReport(devices);
-    setBanner("HTML report downloaded");
-  }
-
-  function onExportPdf() {
-    try {
-      printPdfReport(devices);
-      setBanner("Print dialog opened — choose “Save as PDF”");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "PDF export failed");
-    }
+  function primaryOpenUrl(d: Device): string | null {
+    return d.web_ui_local || d.web_ui_external || httpUrlForIp(d.ip);
   }
 
   return (
-    <div>
+    <div className="devices-page">
       <PageHeader
         title="Devices"
-        description="Inventory — open web UI, ping, resolve DNS, rename, export"
+        description="Network inventory"
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="devices-header-actions">
             <button
               type="button"
               disabled={bulkBusy || devices.length === 0}
@@ -215,51 +234,68 @@ export function Devices() {
             <button
               type="button"
               disabled={devices.length === 0}
-              onClick={onExportHtml}
+              onClick={() => {
+                downloadHtmlReport(devices);
+                setBanner("HTML report downloaded");
+              }}
               className={btnSecondaryClassName + " h-[40px]"}
             >
-              Export HTML
+              HTML
             </button>
             <button
               type="button"
               disabled={devices.length === 0}
-              onClick={onExportPdf}
+              onClick={() => {
+                try {
+                  printPdfReport(devices);
+                  setBanner("Print dialog opened — choose “Save as PDF”");
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "PDF export failed");
+                }
+              }}
               className={btnPrimaryClassName + " h-[40px]"}
             >
-              Export PDF
+              PDF
             </button>
           </div>
         }
       />
 
       <form
-        className="mb-4 flex flex-wrap items-center gap-2"
+        className="devices-toolbar"
         onSubmit={(e) => {
           e.preventDefault();
           setQuery(q);
         }}
       >
-        <select
+        <DarkSelect
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className={`${fieldClassName} h-[40px] w-auto min-w-[120px]`}
+          onChange={setStatus}
+          className="dark-dd--compact devices-filter"
           aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-          <option value="unknown">Unknown</option>
-        </select>
+          options={[
+            { value: "", label: "All statuses" },
+            { value: "online", label: "Online" },
+            { value: "offline", label: "Offline" },
+            { value: "unknown", label: "Unknown" },
+          ]}
+        />
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name, IP, MAC, host…"
-          className={`${fieldClassName} h-[40px] w-56`}
+          className={`${fieldClassName} devices-search`}
+          aria-label="Search devices"
         />
-        <button type="submit" className={btnSecondaryClassName + " h-[40px]"}>
+        <button type="submit" className={btnSecondaryClassName + " h-[40px] shrink-0"}>
           Search
         </button>
+        {!loading && (
+          <span className="devices-count" aria-live="polite">
+            {devices.length} device{devices.length === 1 ? "" : "s"}
+          </span>
+        )}
       </form>
 
       {loading && <LoadingState label="Loading devices…" />}
@@ -269,11 +305,11 @@ export function Devices() {
         </div>
       )}
       {banner && (
-        <div
-          className="mb-4 rounded-[12px] border border-sky-400/30 bg-sky-500/15 px-4 py-3 text-sm text-sky-100"
-          role="status"
-        >
+        <div className="devices-banner" role="status">
           {banner}
+          <button type="button" className="devices-banner-dismiss" onClick={() => setBanner(null)} aria-label="Dismiss">
+            ×
+          </button>
         </div>
       )}
 
@@ -285,181 +321,166 @@ export function Devices() {
       )}
 
       {!loading && !error && devices.length > 0 && (
-        <div className="glass-card data-table-wrap overflow-x-auto p-0">
-          <table className="data-table min-w-full text-left">
-            <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-white/50">
-              <tr>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Device</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">IP</th>
-                <th className="px-4 py-3 font-medium">MAC</th>
-                <th className="px-4 py-3 font-medium">DNS host</th>
-                <th className="px-4 py-3 font-medium">Open</th>
-                <th className="px-4 py-3 font-medium">Tools</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/8">
-              {devices.map((d) => {
-                const http = httpUrlForIp(d.ip);
-                const https = httpsUrlForIp(d.ip);
-                const msg = actionMsg[d.id];
-                const busy = busyId === d.id || bulkBusy;
-                const isRenaming = renamingId === d.id;
-                return (
-                  <tr key={d.id} className="hover:bg-white/[0.03]">
-                    <td className="px-4 py-3">
-                      <StatusBadge status={d.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      {isRenaming ? (
-                        <div className="flex min-w-[160px] flex-col gap-1.5">
-                          <input
-                            autoFocus
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") void saveRename(d);
-                              if (e.key === "Escape") setRenamingId(null);
-                            }}
-                            placeholder="Friendly name"
-                            className={`${fieldClassName} h-[36px]`}
-                          />
-                          <div className="flex gap-1.5">
-                            <button
-                              type="button"
-                              className={btnSecondaryClassName}
-                              disabled={busy}
-                              onClick={() => void saveRename(d)}
-                            >
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              className={btnSecondaryClassName}
-                              onClick={() => setRenamingId(null)}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="device-avatar">
-                            <DeviceIcon name={d.icon} size={18} />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="truncate font-medium text-white/90">
-                              {deviceLabel(d)}
+        <div className="glass-card devices-table-wrap p-0">
+          <div className="devices-table-scroll">
+            <table className="devices-table">
+              <thead>
+                <tr>
+                  <th className="col-status">Status</th>
+                  <th className="col-device">Device</th>
+                  <th className="col-type">Type</th>
+                  <th className="col-ip">IP</th>
+                  <th className="col-mac">MAC</th>
+                  <th className="col-host">Host</th>
+                  <th className="col-actions">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {devices.map((d) => {
+                  const msg = actionMsg[d.id];
+                  const busy = busyId === d.id || bulkBusy;
+                  const isRenaming = renamingId === d.id;
+                  const openUrl = primaryOpenUrl(d);
+                  return (
+                    <tr key={d.id}>
+                      <td className="col-status">
+                        <StatusBadge status={d.status} />
+                      </td>
+                      <td className="col-device">
+                        {isRenaming ? (
+                          <div className="devices-rename">
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") void saveRename(d);
+                                if (e.key === "Escape") setRenamingId(null);
+                              }}
+                              placeholder="Friendly name"
+                              className={`${fieldClassName} h-[36px]`}
+                              aria-label="Device name"
+                            />
+                            <div className="devices-rename-actions">
+                              <button
+                                type="button"
+                                className={btnPrimaryClassName + " !h-8 !px-3 !text-xs"}
+                                disabled={busy}
+                                onClick={() => void saveRename(d)}
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                className={btnSecondaryClassName + " !h-8 !px-3 !text-xs"}
+                                onClick={() => setRenamingId(null)}
+                              >
+                                Cancel
+                              </button>
                             </div>
-                            {d.name && d.hostname && (
-                              <div className="truncate text-[11px] text-white/40">
-                                {d.hostname}
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-white/70">{d.type ?? "—"}</td>
-                    <td className="px-4 py-3 font-mono text-white/90">{d.ip ?? "—"}</td>
-                    <td className="px-4 py-3 font-mono text-white/70">{d.mac}</td>
-                    <td className="px-4 py-3 text-white/70">{d.hostname ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          disabled={!d.web_ui_local}
-                          onClick={() => openExternal(d.web_ui_local)}
-                          className={btnSecondaryClassName}
-                          title={d.web_ui_local ?? "No LAN URL"}
-                        >
-                          LAN
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!d.web_ui_external}
-                          onClick={() => openExternal(d.web_ui_external)}
-                          className={btnSecondaryClassName}
-                          title={d.web_ui_external ?? "No external URL"}
-                        >
-                          Ext
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!http}
-                          onClick={() => openExternal(http)}
-                          className={btnSecondaryClassName}
-                        >
-                          HTTP
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!https}
-                          onClick={() => openExternal(https)}
-                          className={btnSecondaryClassName}
-                        >
-                          HTTPS
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex flex-wrap gap-1.5">
-                          <button
-                            type="button"
+                        ) : (
+                          <div className="devices-identity">
+                            <div className="device-avatar" aria-hidden>
+                              <DeviceIcon name={d.icon} size={18} />
+                            </div>
+                            <div className="devices-identity-text">
+                              <Link to={`/devices/${d.id}`} className="devices-name">
+                                {deviceLabel(d)}
+                              </Link>
+                              {d.name && d.hostname && (
+                                <span className="devices-sub">{d.hostname}</span>
+                              )}
+                              {msg && (
+                                <span
+                                  className={`devices-msg ${
+                                    msg.ok === false ? "is-err" : msg.ok ? "is-ok" : ""
+                                  }`}
+                                >
+                                  {msg.text}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                      <td className="col-type">
+                        <span className="devices-type">{d.type ?? "—"}</span>
+                      </td>
+                      <td className="col-ip">
+                        <span className="devices-mono">{d.ip ?? "—"}</span>
+                      </td>
+                      <td className="col-mac">
+                        <span className="devices-mono devices-mac">{d.mac}</span>
+                      </td>
+                      <td className="col-host">
+                        <span className="devices-host">{d.hostname ?? "—"}</span>
+                      </td>
+                      <td className="col-actions">
+                        <div className="dev-tools" role="group" aria-label={`Actions for ${deviceLabel(d)}`}>
+                          <ToolBtn
+                            label="Open web UI"
+                            title={openUrl ?? "No URL"}
+                            disabled={!openUrl}
+                            onClick={() => openExternal(openUrl)}
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <path d="M14 4h6v6" />
+                              <path d="M10 14 20 4" />
+                              <path d="M20 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5" />
+                            </svg>
+                          </ToolBtn>
+                          <ToolBtn
+                            label="Ping"
                             disabled={!d.ip || busy}
                             onClick={() => void onPing(d)}
-                            className={btnSecondaryClassName}
                           >
-                            Ping
-                          </button>
-                          <button
-                            type="button"
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <path d="M5 12.5a9 9 0 0 1 14 0" />
+                              <path d="M8.5 15.5a4.5 4.5 0 0 1 7 0" />
+                              <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none" />
+                            </svg>
+                          </ToolBtn>
+                          <ToolBtn
+                            label="Resolve DNS"
                             disabled={!d.ip || busy}
                             onClick={() => void onResolve(d)}
-                            className={btnSecondaryClassName}
                           >
-                            Resolve
-                          </button>
-                          <button
-                            type="button"
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+                            </svg>
+                          </ToolBtn>
+                          <ToolBtn
+                            label="Rename"
                             disabled={busy}
                             onClick={() => startRename(d)}
-                            className={btnSecondaryClassName}
                           >
-                            Rename
-                          </button>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                            </svg>
+                          </ToolBtn>
+                          <Link
+                            to={`/devices/${d.id}`}
+                            className="dev-tool-btn is-link"
+                            title="Details"
+                            aria-label="Details"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <path d="m9 6 6 6-6 6" />
+                            </svg>
+                          </Link>
                         </div>
-                        {msg && (
-                          <span
-                            className={`text-[11px] ${
-                              msg.ok === false
-                                ? "text-red-200/90"
-                                : msg.ok
-                                  ? "text-emerald-200/90"
-                                  : "text-white/50"
-                            }`}
-                          >
-                            {msg.text}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        to={`/devices/${d.id}`}
-                        className="text-sky-300/90 hover:text-sky-200"
-                      >
-                        Details
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

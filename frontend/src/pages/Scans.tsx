@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, apiFetch } from "../api/client";
+import { SubnetSelect } from "../components/SubnetSelect";
 import {
   btnPrimaryClassName,
   btnSecondaryClassName,
@@ -231,13 +232,13 @@ export function Scans() {
       {error && <ErrorBanner message={error} />}
 
       {/* ── Network scan control panel ── */}
-      <section className="glass-card relative overflow-hidden p-0">
+      <section className="glass-card relative overflow-visible p-0">
         {/* subtle top accent */}
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/40 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-px bg-gradient-to-r from-transparent via-sky-300/40 to-transparent"
           aria-hidden
         />
-        <div className="border-b border-white/[0.08] px-5 py-4 sm:px-6">
+        <div className="relative z-[1] border-b border-white/[0.08] px-5 py-4 sm:px-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-400/15 ring-1 ring-sky-300/25">
@@ -277,50 +278,23 @@ export function Scans() {
           </div>
         </div>
 
-        <div className="px-5 py-5 sm:px-6">
+        <div className="relative z-[1] overflow-visible px-5 py-5 sm:px-6">
           {settingsLoading ? (
             <LoadingState label="Loading scan settings…" />
           ) : (
-            <div className="flex flex-col gap-5">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
-                <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-5">
+            <div className="flex flex-col gap-5 overflow-visible">
+              <div className="grid gap-4 overflow-visible sm:grid-cols-2 lg:grid-cols-12">
+                <div className="relative z-20 flex flex-col gap-1.5 overflow-visible sm:col-span-2 lg:col-span-5">
                   <span className="text-xs font-medium uppercase tracking-wide text-white/45">
                     Subnet (CIDR)
                   </span>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-                    <select
-                      className={`${fieldClassName} cursor-pointer`}
-                      aria-label="Subnet preset"
-                      value={
-                        SUBNET_PRESETS.some((p) => p.cidr === scanSubnet.trim())
-                          ? scanSubnet.trim()
-                          : "__custom__"
-                      }
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (v !== "__custom__") setScanSubnet(v);
-                      }}
-                    >
-                      {SUBNET_PRESETS.map((p) => (
-                        <option key={p.cidr} value={p.cidr}>
-                          {p.label} — {p.hint}
-                        </option>
-                      ))}
-                      <option value="__custom__">Custom…</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={scanSubnet}
-                      onChange={(e) => setScanSubnet(e.target.value)}
-                      placeholder="192.168.1.0/24"
-                      spellCheck={false}
-                      className={`${fieldClassName} font-mono text-[14px]`}
-                      aria-label="Scan subnet CIDR"
-                    />
-                  </div>
+                  <SubnetSelect
+                    value={scanSubnet}
+                    onChange={setScanSubnet}
+                    presets={SUBNET_PRESETS}
+                  />
                   <span className="text-[11px] text-white/40">
-                    {SUBNET_PRESETS.find((p) => p.cidr === scanSubnet.trim())?.hint ??
-                      "Custom range — type any CIDR"}
+                    Presets + custom range in one menu
                   </span>
                 </div>
 

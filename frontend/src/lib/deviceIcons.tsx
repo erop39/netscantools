@@ -1,6 +1,6 @@
 /**
- * Device type icons — names aligned with Semantic UI / Font Awesome–style sets
- * https://semantic-ui.com/elements/icon.html
+ * Device type icons — Semantic UI / FA–style names.
+ * Grouped for a tidy IconPicker layout.
  */
 import type { ReactNode, SVGProps } from "react";
 
@@ -45,6 +45,36 @@ export type DeviceIconKey =
   | "car"
   | "question";
 
+export type IconGroup = {
+  id: string;
+  label: string;
+  keys: DeviceIconKey[];
+};
+
+/** Ordered groups for the picker — not a flat dump of 40 icons */
+export const ICON_GROUPS: IconGroup[] = [
+  {
+    id: "network",
+    label: "Network",
+    keys: ["wifi", "router", "sitemap", "ethernet", "broadcast", "globe", "cloud", "satellite", "bluetooth"],
+  },
+  {
+    id: "compute",
+    label: "Compute & storage",
+    keys: ["desktop", "laptop", "tablet", "mobile", "phone", "server", "database", "hdd", "folder", "box"],
+  },
+  {
+    id: "media",
+    label: "Media & office",
+    keys: ["camera", "video", "tv", "print", "headphones", "gamepad", "fax"],
+  },
+  {
+    id: "home",
+    label: "Home & IoT",
+    keys: ["microchip", "plug", "power", "lightbulb", "thermometer", "home", "shield", "key", "cogs", "bell", "usb", "car", "question"],
+  },
+];
+
 export const DEVICE_ICONS: { key: DeviceIconKey; label: string }[] = [
   { key: "wifi", label: "Wi‑Fi" },
   { key: "router", label: "Router" },
@@ -87,20 +117,30 @@ export const DEVICE_ICONS: { key: DeviceIconKey; label: string }[] = [
   { key: "question", label: "Unknown" },
 ];
 
-/** Quick type chips → suggest type label + icon */
+const LABEL_BY_KEY = Object.fromEntries(DEVICE_ICONS.map((i) => [i.key, i.label])) as Record<
+  DeviceIconKey,
+  string
+>;
+
+export function iconLabel(key: string | null | undefined): string {
+  if (!key) return "Unknown";
+  return LABEL_BY_KEY[key as DeviceIconKey] ?? key;
+}
+
+/** Quick type chips → type label + icon */
 export const TYPE_PRESETS: { type: string; icon: DeviceIconKey; label: string }[] = [
   { type: "router", icon: "router", label: "Router" },
   { type: "switch", icon: "sitemap", label: "Switch" },
-  { type: "ap", icon: "wifi", label: "Access Point" },
+  { type: "ap", icon: "wifi", label: "AP" },
   { type: "nas", icon: "hdd", label: "NAS" },
   { type: "server", icon: "server", label: "Server" },
   { type: "camera", icon: "camera", label: "Camera" },
-  { type: "nvr", icon: "video", label: "NVR / DVR" },
+  { type: "nvr", icon: "video", label: "NVR" },
   { type: "printer", icon: "print", label: "Printer" },
   { type: "pc", icon: "desktop", label: "PC" },
   { type: "laptop", icon: "laptop", label: "Laptop" },
   { type: "phone", icon: "mobile", label: "Phone" },
-  { type: "tv", icon: "tv", label: "Smart TV" },
+  { type: "tv", icon: "tv", label: "TV" },
   { type: "iot", icon: "microchip", label: "IoT" },
   { type: "ups", icon: "power", label: "UPS" },
   { type: "other", icon: "box", label: "Other" },
@@ -134,47 +174,47 @@ const paths: Record<DeviceIconKey, ReactNode> = {
   laptop: (
     <>
       <rect x="3" y="5" width="18" height="11" rx="1.5" />
-      <path d="M2 19h20" />
+      <path d="M2 18h20" />
     </>
   ),
-  tablet: (
-    <>
-      <rect x="5" y="2" width="14" height="20" rx="2" />
-      <path d="M12 18h.01" />
-    </>
-  ),
+  tablet: <rect x="5" y="2" width="14" height="20" rx="2" />,
   mobile: (
     <>
       <rect x="7" y="2" width="10" height="20" rx="2" />
-      <path d="M12 18h.01" />
+      <path d="M11 18h2" />
+    </>
+  ),
+  phone: (
+    <>
+      <rect x="7" y="2" width="10" height="20" rx="2" />
+      <path d="M11 18h2" />
     </>
   ),
   server: (
     <>
       <rect x="3" y="3" width="18" height="6" rx="1.5" />
       <rect x="3" y="11" width="18" height="6" rx="1.5" />
-      <path d="M7 6h.01M7 14h.01M12 6h5M12 14h5" />
-      <path d="M6 20h12" />
+      <path d="M7 6h.01M7 14h.01" />
     </>
   ),
   database: (
     <>
-      <ellipse cx="12" cy="5" rx="8" ry="3" />
-      <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
-      <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+      <ellipse cx="12" cy="6" rx="7" ry="3" />
+      <path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" />
+      <path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
     </>
   ),
   hdd: (
     <>
-      <rect x="3" y="6" width="18" height="12" rx="2" />
-      <path d="M7 12h.01M12 12h6" />
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M7 12h.01M12 12h5" />
     </>
   ),
   wifi: (
     <>
       <path d="M5 12.5a9 9 0 0 1 14 0" />
-      <path d="M8.5 15.5a5 5 0 0 1 7 0" />
-      <path d="M12 19h.01" />
+      <path d="M8.5 15.5a4.5 4.5 0 0 1 7 0" />
+      <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none" />
     </>
   ),
   broadcast: (
@@ -187,17 +227,12 @@ const paths: Record<DeviceIconKey, ReactNode> = {
   sitemap: (
     <>
       <rect x="9" y="2" width="6" height="5" rx="1" />
-      <path d="M12 7v4M5 15v-4h14v4" />
-      <rect x="2" y="15" width="6" height="5" rx="1" />
-      <rect x="9" y="15" width="6" height="5" rx="1" />
-      <rect x="16" y="15" width="6" height="5" rx="1" />
+      <rect x="2" y="17" width="6" height="5" rx="1" />
+      <rect x="16" y="17" width="6" height="5" rx="1" />
+      <path d="M12 7v4M5 17v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2M12 11H5" />
     </>
   ),
-  cloud: (
-    <>
-      <path d="M18 18H7a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6-1.5A3.5 3.5 0 0 1 18 18z" />
-    </>
-  ),
+  cloud: <path d="M7.5 18a4.5 4.5 0 0 1-.4-9 6 6 0 0 1 11.4 1.5A3.5 3.5 0 0 1 18 18H7.5z" />,
   camera: (
     <>
       <path d="M4 8h3l2-2h6l2 2h3v11H4z" />
@@ -213,8 +248,8 @@ const paths: Record<DeviceIconKey, ReactNode> = {
   print: (
     <>
       <path d="M6 9V3h12v6" />
-      <rect x="4" y="9" width="16" height="8" rx="1.5" />
-      <path d="M6 17h12v4H6z" />
+      <path d="M6 17H4a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2" />
+      <rect x="6" y="13" width="12" height="8" rx="1" />
     </>
   ),
   tv: (
@@ -225,8 +260,8 @@ const paths: Record<DeviceIconKey, ReactNode> = {
   ),
   gamepad: (
     <>
-      <rect x="2" y="8" width="20" height="10" rx="4" />
-      <path d="M8 12v4M6 14h4M16 12h.01M18 14h.01" />
+      <rect x="2" y="7" width="20" height="11" rx="4" />
+      <path d="M7 12h4M9 10v4M16 11h.01M18 13h.01" />
     </>
   ),
   headphones: (
@@ -238,36 +273,32 @@ const paths: Record<DeviceIconKey, ReactNode> = {
   microchip: (
     <>
       <rect x="6" y="6" width="12" height="12" rx="1.5" />
-      <path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4" />
+      <path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" />
     </>
   ),
   plug: (
     <>
-      <path d="M9 2v5M15 2v5M8 7h8v3a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7z" />
-      <path d="M12 14v8" />
+      <path d="M9 2v5M15 2v5" />
+      <path d="M7 7h10v4a5 5 0 0 1-5 5v4" />
     </>
   ),
   lightbulb: (
     <>
       <path d="M9 18h6M10 21h4" />
-      <path d="M12 3a6 6 0 0 0-3 11c.5.6 1 1.3 1 2h4c0-.7.5-1.4 1-2A6 6 0 0 0 12 3z" />
+      <path d="M8.5 14a5.5 5.5 0 1 1 7 0c-.7.8-1.5 1.5-1.5 3H10c0-1.5-.8-2.2-1.5-3z" />
     </>
   ),
   home: (
     <>
-      <path d="m3 11 9-8 9 8" />
-      <path d="M5 10v10h14V10" />
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20h14V9.5" />
     </>
   ),
-  shield: (
-    <>
-      <path d="M12 3 4 6v6c0 5 3.5 8.5 8 9.5 4.5-1 8-4.5 8-9.5V6l-8-3z" />
-    </>
-  ),
+  shield: <path d="M12 3 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-3z" />,
   key: (
     <>
-      <circle cx="8" cy="14" r="4" />
-      <path d="M11.5 12.5 21 3M17 3l2 2M15 5l2 2" />
+      <circle cx="8" cy="15" r="4" />
+      <path d="M11 12 21 2M17 3l3 3" />
     </>
   ),
   cogs: (
@@ -284,57 +315,42 @@ const paths: Record<DeviceIconKey, ReactNode> = {
   ),
   ethernet: (
     <>
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d="M8 8v3M12 8v3M16 8v3M8 14h8v3H8z" />
+      <rect x="3" y="8" width="18" height="10" rx="2" />
+      <path d="M7 8V5h2v3M11 8V5h2v3M15 8V5h2v3M8 18v2M12 18v2M16 18v2" />
     </>
   ),
   router: (
     <>
       <rect x="3" y="11" width="18" height="8" rx="2" />
-      <path d="M7 15h.01M12 15h.01M6 11V8a3 3 0 0 1 6 0v3M15 8a3 3 0 0 1 3 3v0" />
-    </>
-  ),
-  phone: (
-    <>
-      <path d="M6 3h5l1 5-2.5 1.5a12 12 0 0 0 5 5L16 12l5 1v5a2 2 0 0 1-2 2A16 16 0 0 1 4 5a2 2 0 0 1 2-2z" />
+      <path d="M7 11V8M12 11V6M17 11V8M8 15h.01M12 15h.01" />
     </>
   ),
   fax: (
     <>
-      <rect x="4" y="8" width="16" height="11" rx="1.5" />
-      <path d="M7 8V5h7l3 3v0M8 13h5M8 16h8" />
+      <rect x="4" y="6" width="16" height="14" rx="2" />
+      <path d="M8 6V4h8v2M8 12h8M8 15h5" />
     </>
   ),
   usb: (
     <>
-      <path d="M12 2v14" />
-      <circle cx="12" cy="18" r="2.5" />
-      <path d="M8 6h8M9 10h6" />
+      <path d="M12 2v13" />
+      <circle cx="12" cy="18" r="3" />
+      <path d="M8 7h8M8 7l-2 3M16 7l2 3" />
     </>
   ),
-  bluetooth: (
-    <>
-      <path d="m7 7 10 10-5 5V2l5 5L7 17" />
-    </>
-  ),
+  bluetooth: <path d="m7 7 10 10-5 4V3l5 4L7 17" />,
   satellite: (
     <>
-      <path d="m13 7 4-4 3 3-4 4" />
-      <path d="m13 7-2 2a4 4 0 0 0 0 5.7l5.6 5.6a4 4 0 0 0 5.7 0l2-2" />
-      <path d="M4 14a6 6 0 0 0 6 6" />
-      <path d="M2 20a10 10 0 0 0 10 0" />
+      <path d="m13 7 4 4M8 16l-3 3" />
+      <rect x="12" y="4" width="8" height="8" rx="1" transform="rotate(45 16 8)" />
+      <path d="M6 12a6 6 0 0 0 6 6" />
     </>
   ),
-  power: (
-    <>
-      <path d="M12 2v10" />
-      <path d="M6.3 6.3a8 8 0 1 0 11.4 0" />
-    </>
-  ),
+  power: <path d="M12 3v8M7.5 6.5a7 7 0 1 0 9 0" />,
   thermometer: (
     <>
-      <path d="M12 3a3 3 0 0 0-3 3v8a4 4 0 1 0 6 0V6a3 3 0 0 0-3-3z" />
-      <path d="M12 14v4" />
+      <path d="M12 14V4a2 2 0 0 1 4 0v10a4 4 0 1 1-4 0z" />
+      <path d="M14 16a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" fill="currentColor" stroke="none" />
     </>
   ),
   bell: (
@@ -343,30 +359,27 @@ const paths: Record<DeviceIconKey, ReactNode> = {
       <path d="M10 19a2 2 0 0 0 4 0" />
     </>
   ),
-  folder: (
-    <>
-      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    </>
-  ),
+  folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
   box: (
     <>
-      <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" />
-      <path d="M12 12v9M3 7.5l9 4.5 9-4.5" />
+      <path d="M3 8.5 12 4l9 4.5-9 4.5z" />
+      <path d="M3 8.5v7L12 20l9-4.5v-7" />
+      <path d="M12 13v7" />
     </>
   ),
   car: (
     <>
-      <path d="M4 14h16l-1.5-5H5.5z" />
-      <path d="M5 14v4h2v-1h10v1h2v-4" />
-      <circle cx="7.5" cy="17.5" r="1.2" />
-      <circle cx="16.5" cy="17.5" r="1.2" />
+      <path d="M4 14 6 8h12l2 6" />
+      <path d="M3 14h18v4H3z" />
+      <circle cx="7.5" cy="18" r="1.5" />
+      <circle cx="16.5" cy="18" r="1.5" />
     </>
   ),
   question: (
     <>
       <circle cx="12" cy="12" r="9" />
-      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.8 2.1c-.8.5-1.3 1-1.3 2" />
-      <path d="M12 17h.01" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.7 2.2c-.7.5-1.2 1-1.2 2V14.5" />
+      <path d="M12 17.5h.01" />
     </>
   ),
 };
@@ -375,13 +388,14 @@ export function DeviceIcon({
   name,
   size = 20,
   className,
-}: {
-  name?: string | null;
-  size?: number;
-  className?: string;
-}) {
+  ...rest
+}: Omit<IconProps, "name"> & { name?: string | null }) {
   const key = (name && name in paths ? name : "question") as DeviceIconKey;
-  return <svg {...base({ size, className })}>{paths[key]}</svg>;
+  return (
+    <svg {...base({ size, className, ...rest })}>
+      {paths[key]}
+    </svg>
+  );
 }
 
 export function isDeviceIconKey(v: string | null | undefined): v is DeviceIconKey {

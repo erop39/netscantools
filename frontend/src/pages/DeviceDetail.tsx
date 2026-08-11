@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
 import {
@@ -19,10 +18,47 @@ import { deviceLabel } from "../lib/deviceLabel";
 import {
   DeviceIcon,
   TYPE_PRESETS,
+  iconLabel,
   type DeviceIconKey,
 } from "../lib/deviceIcons";
 import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
 import type { Device, PingResult, ResolveResult } from "../types";
+
+function ToolIconBtn({
+  label,
+  title,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  title?: string;
+  disabled?: boolean;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className="dev-tool-btn"
+      title={title ?? label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="detail-fact">
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
 
 export function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +73,7 @@ export function DeviceDetail() {
   const [toolBusy, setToolBusy] = useState(false);
   const [toolMsg, setToolMsg] = useState<string | null>(null);
   const [toolOk, setToolOk] = useState<boolean | null>(null);
+  const [showAllIcons, setShowAllIcons] = useState(false);
 
   const [name, setName] = useState("");
   const [type, setType] = useState("");
@@ -106,12 +143,13 @@ export function DeviceDetail() {
       setName(updated.name ?? "");
       setType(updated.type ?? "");
       setIcon(updated.icon ?? null);
+      setNotes(updated.notes ?? "");
+      setWebUiLocal(updated.web_ui_local ?? "");
+      setWebUiExternal(updated.web_ui_external ?? "");
       setSuccess("Device updated");
     } catch (err) {
       setError(
-        err instanceof ApiError
-          ? `Save failed (${err.status})`
-          : "Save failed",
+        err instanceof ApiError ? `Save failed (${err.status})` : "Save failed",
       );
     } finally {
       setSaving(false);
@@ -145,14 +183,16 @@ export function DeviceDetail() {
     setToolMsg(null);
     setToolOk(null);
     try {
-      const r = await apiFetch<PingResult>(`/api/devices/${id}/ping`, { method: "POST" });
+      const r = await apiFetch<PingResult>(`/api/devices/${id}/ping`, {
+        method: "POST",
+      });
       setToolMsg(r.message);
       setToolOk(r.ok);
-      setDevice((d) =>
-        d ? { ...d, status: r.ok ? "online" : "offline" } : d,
-      );
+      setDevice((d) => (d ? { ...d, status: r.ok ? "online" : "offline" } : d));
     } catch (err) {
-      setToolMsg(err instanceof ApiError ? `Ping failed (${err.status})` : "Ping failed");
+      setToolMsg(
+        err instanceof ApiError ? `Ping failed (${err.status})` : "Ping failed",
+      );
       setToolOk(false);
     } finally {
       setToolBusy(false);
@@ -168,12 +208,16 @@ export function DeviceDetail() {
       const r = await apiFetch<ResolveResult>(`/api/devices/${id}/resolve`, {
         method: "POST",
       });
-      setToolMsg(r.hostname ? `Hostname: ${r.hostname}` : "No PTR record for this IP");
+      setToolMsg(
+        r.hostname ? `Hostname: ${r.hostname}` : "No PTR record for this IP",
+      );
       setToolOk(Boolean(r.hostname));
       if (r.device) setDevice(r.device);
     } catch (err) {
       setToolMsg(
-        err instanceof ApiError ? `Resolve failed (${err.status})` : "Resolve failed",
+        err instanceof ApiError
+          ? `Resolve failed (${err.status})`
+          : "Resolve failed",
       );
       setToolOk(false);
     } finally {
@@ -181,14 +225,19 @@ export function DeviceDetail() {
     }
   }
 
+  function pickPreset(p: (typeof TYPE_PRESETS)[number]) {
+    setType(p.type);
+    setIcon(p.icon);
+  }
+
   return (
-    <div>
+    <div className="device-detail">
       <PageHeader
         title={device ? deviceLabel(device) : "Device detail"}
         description={device ? device.mac : "Edit inventory fields"}
         actions={
           <Link to="/devices" className={`${btnSecondaryClassName} h-[40px]`}>
-            ← Back to devices
+            ← Devices
           </Link>
         }
       />
@@ -196,142 +245,153 @@ export function DeviceDetail() {
       {loading && <LoadingState label="Loading device…" />}
       {error && <ErrorBanner message={error} />}
       {success && (
-        <div className="mb-4 rounded-md border border-emerald-400/30 bg-emerald-500/15 px-4 py-3 text-sm text-emerald-100">
+        <div className="devices-banner mb-4" role="status">
           {success}
+          <button
+            type="button"
+            className="devices-banner-dismiss"
+            onClick={() => setSuccess(null)}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
         </div>
       )}
 
       {!loading && device && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <GlassCard className="lg:col-span-1">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="device-avatar !h-12 !w-12 !rounded-2xl">
-                <DeviceIcon name={device.icon} size={24} />
+        <div className="device-detail-grid">
+          {/* ── Left: identity + discovery + tools ── */}
+          <GlassCard className="device-detail-side">
+            <div className="device-detail-hero">
+              <div className="device-avatar device-avatar--lg" aria-hidden>
+                <DeviceIcon name={icon || device.icon} size={26} />
               </div>
               <div className="min-w-0">
-                <div className="truncate font-semibold text-white/95">{deviceLabel(device)}</div>
-                <div className="text-xs text-white/45">
-                  {device.type || "No type"} · {device.icon || "no icon"}
+                <div className="device-detail-title">{deviceLabel(device)}</div>
+                <div className="device-detail-meta">
+                  <StatusBadge status={device.status} />
+                  <span className="device-detail-meta-sep">·</span>
+                  <span>{type || device.type || "No type"}</span>
+                  {(icon || device.icon) && (
+                    <>
+                      <span className="device-detail-meta-sep">·</span>
+                      <span>{iconLabel(icon || device.icon)}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
-            <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-white/50">
-              Discovery
-            </h2>
-            <dl className="space-y-3 text-sm">
-              <div>
-                <dt className="text-white/45">Status</dt>
-                <dd className="mt-1">
-                  <StatusBadge status={device.status} />
-                </dd>
-              </div>
-              <div>
-                <dt className="text-white/45">IP</dt>
-                <dd className="mt-0.5 font-mono text-white/90">{device.ip ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-white/45">MAC</dt>
-                <dd className="mt-0.5 font-mono text-white/90">{device.mac}</dd>
-              </div>
-              <div>
-                <dt className="text-white/45">Name (manual)</dt>
-                <dd className="mt-0.5 text-white/90">{device.name ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-white/45">DNS hostname</dt>
-                <dd className="mt-0.5 text-white/90">{device.hostname ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-white/45">Vendor</dt>
-                <dd className="mt-0.5 text-white/90">{device.vendor ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-white/45">Last seen</dt>
-                <dd className="mt-0.5 text-white/90">{formatDateTime(device.last_seen)}</dd>
-              </div>
-              <div>
-                <dt className="text-white/45">First seen</dt>
-                <dd className="mt-0.5 text-white/90">{formatDateTime(device.first_seen)}</dd>
-              </div>
-            </dl>
 
-            <div className="mt-6 border-t border-white/10 pt-4">
-              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-white/50">
-                Open & tools
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={!device.web_ui_local}
-                  className={btnSecondaryClassName}
-                  onClick={() => openExternal(device.web_ui_local)}
-                >
-                  Open LAN
-                </button>
-                <button
-                  type="button"
-                  disabled={!device.web_ui_external}
-                  className={btnSecondaryClassName}
-                  onClick={() => openExternal(device.web_ui_external)}
-                >
-                  Open Ext
-                </button>
-                <button
-                  type="button"
-                  disabled={!device.ip}
-                  className={btnSecondaryClassName}
-                  onClick={() => openExternal(httpUrlForIp(device.ip))}
-                >
-                  HTTP
-                </button>
-                <button
-                  type="button"
-                  disabled={!device.ip}
-                  className={btnSecondaryClassName}
-                  onClick={() => openExternal(httpsUrlForIp(device.ip))}
-                >
-                  HTTPS
-                </button>
-                <button
-                  type="button"
-                  disabled={!device.ip || toolBusy}
-                  className={btnSecondaryClassName}
-                  onClick={() => void onPing()}
-                >
-                  {toolBusy ? "…" : "Ping"}
-                </button>
-                <button
-                  type="button"
-                  disabled={!device.ip || toolBusy}
-                  className={btnSecondaryClassName}
-                  onClick={() => void onResolve()}
-                >
-                  Resolve name
-                </button>
+            <section className="device-detail-section">
+              <h2 className="device-detail-section-title">Discovery</h2>
+              <dl className="detail-facts">
+                <Fact label="IP">
+                  <span className="devices-mono">{device.ip ?? "—"}</span>
+                </Fact>
+                <Fact label="MAC">
+                  <span className="devices-mono devices-mac">{device.mac}</span>
+                </Fact>
+                <Fact label="DNS">{device.hostname ?? "—"}</Fact>
+                <Fact label="Vendor">{device.vendor ?? "—"}</Fact>
+                <Fact label="Last seen">{formatDateTime(device.last_seen)}</Fact>
+                <Fact label="First seen">{formatDateTime(device.first_seen)}</Fact>
+              </dl>
+            </section>
+
+            <section className="device-detail-section">
+              <h2 className="device-detail-section-title">Open & tools</h2>
+
+              <div className="detail-tool-block">
+                <div className="detail-tools-label">Open web UI</div>
+                <div className="dev-tools dev-tools--wide" role="group" aria-label="Open web UI">
+                  <ToolIconBtn
+                    label="LAN URL"
+                    title={device.web_ui_local ?? "No LAN URL"}
+                    disabled={!device.web_ui_local}
+                    onClick={() => openExternal(device.web_ui_local)}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <rect x="2" y="6" width="20" height="12" rx="2" />
+                      <path d="M6 10h4M6 14h2" />
+                    </svg>
+                  </ToolIconBtn>
+                  <ToolIconBtn
+                    label="External URL"
+                    title={device.web_ui_external ?? "No external URL"}
+                    disabled={!device.web_ui_external}
+                    onClick={() => openExternal(device.web_ui_external)}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+                    </svg>
+                  </ToolIconBtn>
+                  <ToolIconBtn
+                    label="HTTP"
+                    title={httpUrlForIp(device.ip) ?? "No IP"}
+                    disabled={!device.ip}
+                    onClick={() => openExternal(httpUrlForIp(device.ip))}
+                  >
+                    <span className="dev-tool-text">http</span>
+                  </ToolIconBtn>
+                  <ToolIconBtn
+                    label="HTTPS"
+                    title={httpsUrlForIp(device.ip) ?? "No IP"}
+                    disabled={!device.ip}
+                    onClick={() => openExternal(httpsUrlForIp(device.ip))}
+                  >
+                    <span className="dev-tool-text">https</span>
+                  </ToolIconBtn>
+                </div>
               </div>
-              {toolMsg && (
-                <p
-                  className={`mt-2 text-xs ${
-                    toolOk === false
-                      ? "text-red-200"
-                      : toolOk
-                        ? "text-emerald-200"
-                        : "text-white/60"
-                  }`}
-                >
-                  {toolMsg}
-                </p>
-              )}
-            </div>
+
+              <div className="detail-tool-block">
+                <div className="detail-tools-label">Diagnostics</div>
+                <div className="dev-tools dev-tools--wide" role="group" aria-label="Diagnostics">
+                  <ToolIconBtn
+                    label="Ping"
+                    disabled={!device.ip || toolBusy}
+                    onClick={() => void onPing()}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M5 12.5a9 9 0 0 1 14 0" />
+                      <path d="M8.5 15.5a4.5 4.5 0 0 1 7 0" />
+                      <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none" />
+                    </svg>
+                  </ToolIconBtn>
+                  <ToolIconBtn
+                    label="Resolve DNS"
+                    disabled={!device.ip || toolBusy}
+                    onClick={() => void onResolve()}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m20 20-3.5-3.5" />
+                    </svg>
+                  </ToolIconBtn>
+                </div>
+                {toolMsg && (
+                  <p
+                    className={`detail-tool-msg ${
+                      toolOk === false ? "is-err" : toolOk ? "is-ok" : ""
+                    }`}
+                    role="status"
+                  >
+                    {toolBusy ? "Working…" : toolMsg}
+                  </p>
+                )}
+              </div>
+            </section>
           </GlassCard>
 
-          <GlassCard className="lg:col-span-2">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-white/50">
-              Editable fields
+          {/* ── Right: edit form ── */}
+          <GlassCard className="device-detail-main">
+            <h2 className="device-detail-section-title device-detail-section-title--page">
+              Edit
             </h2>
-            <form onSubmit={onSave} className="flex flex-col gap-4">
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Name (rename)
+            <form onSubmit={onSave} className="device-edit-form">
+              <label className="device-field">
+                <span className="device-field-label">Name</span>
                 <input
                   type="text"
                   value={name}
@@ -339,87 +399,115 @@ export function DeviceDetail() {
                   placeholder="Living room AP, NAS, Camera porch…"
                   className={fieldClassName}
                 />
-                <span className="text-xs text-white/45">
-                  Manual label — not overwritten by scan or DNS resolve
+                <span className="device-field-hint">
+                  Manual label — not overwritten by scan or DNS
                 </span>
               </label>
 
-              <div className="flex flex-col gap-2">
-                <span className="text-sm text-white/80">Type</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {TYPE_PRESETS.map((p) => (
-                    <button
-                      key={p.type}
-                      type="button"
-                      className={`type-chip ${type === p.type ? "is-selected" : ""}`}
-                      onClick={() => {
-                        setType(p.type);
-                        setIcon(p.icon);
-                      }}
-                    >
-                      <DeviceIcon name={p.icon} size={14} />
-                      {p.label}
-                    </button>
-                  ))}
+              <div className="device-field">
+                <span className="device-field-label">Type & icon</span>
+                <p className="device-field-hint device-field-hint--above">
+                  Pick a preset (sets type + icon). Override icon below if needed.
+                </p>
+                <div className="type-chip-grid">
+                  {TYPE_PRESETS.map((p) => {
+                    const selected = type === p.type;
+                    return (
+                      <button
+                        key={p.type}
+                        type="button"
+                        className={`type-chip ${selected ? "is-selected" : ""}`}
+                        onClick={() => pickPreset(p)}
+                      >
+                        <DeviceIcon name={p.icon} size={14} />
+                        {p.label}
+                      </button>
+                    );
+                  })}
                 </div>
                 <input
                   type="text"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  placeholder="Or type custom: router, camera, NAS…"
-                  className={fieldClassName}
+                  placeholder="Custom type…"
+                  className={`${fieldClassName} mt-2`}
+                  aria-label="Custom device type"
                 />
+
+                <div className="device-icon-row">
+                  <div className="device-icon-preview" aria-hidden>
+                    <DeviceIcon name={icon} size={22} />
+                  </div>
+                  <div className="device-icon-row-text">
+                    <span className="device-icon-row-label">
+                      {icon ? iconLabel(icon) : "No custom icon"}
+                    </span>
+                    <button
+                      type="button"
+                      className="device-icon-toggle"
+                      onClick={() => setShowAllIcons((v) => !v)}
+                      aria-expanded={showAllIcons}
+                    >
+                      {showAllIcons ? "Hide icon picker" : "Choose other icon…"}
+                    </button>
+                  </div>
+                </div>
+
+                {showAllIcons && (
+                  <div className="device-icon-picker-wrap">
+                    <IconPicker
+                      value={icon}
+                      onChange={(key: DeviceIconKey | null) => setIcon(key)}
+                    />
+                  </div>
+                )}
               </div>
 
-              <IconPicker
-                value={icon}
-                onChange={(key: DeviceIconKey | null) => setIcon(key)}
-              />
+              <div className="device-field-grid">
+                <label className="device-field">
+                  <span className="device-field-label">Web UI (LAN)</span>
+                  <input
+                    type="url"
+                    value={webUiLocal}
+                    onChange={(e) => setWebUiLocal(e.target.value)}
+                    placeholder="http://192.168.1.1"
+                    className={fieldClassName}
+                  />
+                </label>
+                <label className="device-field">
+                  <span className="device-field-label">Web UI (external)</span>
+                  <input
+                    type="url"
+                    value={webUiExternal}
+                    onChange={(e) => setWebUiExternal(e.target.value)}
+                    placeholder="https://router.example.com"
+                    className={fieldClassName}
+                  />
+                </label>
+              </div>
 
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Web UI (LAN)
-                <input
-                  type="url"
-                  value={webUiLocal}
-                  onChange={(e) => setWebUiLocal(e.target.value)}
-                  placeholder="http://192.168.1.1"
-                  className={fieldClassName}
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Web UI (external)
-                <input
-                  type="url"
-                  value={webUiExternal}
-                  onChange={(e) => setWebUiExternal(e.target.value)}
-                  placeholder="https://router.example.com"
-                  className={fieldClassName}
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Notes
+              <label className="device-field">
+                <span className="device-field-label">Notes</span>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
+                  rows={3}
                   placeholder="Location, credentials reminder, serial…"
                   className="glass-input w-full px-3 py-2 text-sm"
                 />
               </label>
 
-              <div className="mt-2 flex flex-wrap gap-3">
+              <div className="device-edit-actions">
                 <button type="submit" disabled={saving} className={btnPrimaryClassName}>
                   {saving ? "Saving…" : "Save changes"}
                 </button>
                 <button
                   type="button"
                   disabled={deleting}
-                  onClick={onDelete}
+                  onClick={() => void onDelete()}
                   className={btnDangerClassName}
                 >
-                  {deleting ? "Deleting…" : "Delete device"}
+                  {deleting ? "Deleting…" : "Delete"}
                 </button>
               </div>
             </form>

@@ -5,6 +5,7 @@ backend/data/
 backend/.env
 frontend/node_modules/
 frontend/dist/
+frontend/axe-report.json
 __pycache__/
 *.pyc
 .pytest_cache/

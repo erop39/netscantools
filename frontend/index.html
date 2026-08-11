@@ -1,8 +1,16 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-ui="classic">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      try {
+        var s = localStorage.getItem("netpad_ui_skin");
+        if (s === "classic" || s === "ops") document.documentElement.dataset.ui = s;
+      } catch (e) {}
+    </script>
+    <link rel="icon" type="image/png" sizes="64x64" href="/icon-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>netscantools — eG::39</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

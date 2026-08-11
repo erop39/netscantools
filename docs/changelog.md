@@ -12,6 +12,83 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.6.0] — 2026-08-11
+
+### Added
+
+- **Hybrid UI skins** (runtime switch, localStorage `netpad_ui_skin`):
+  - **Classic** — floating glass sidebar + scenic bg (default / rollback)
+  - **Ops Console** — docked rail, solid surfaces, denser layout
+- Settings → **Interface skin** picker
+- Design proposal: `docs/design-system-proposal-v2.md`
+- Git tag **`pre-ops-ui`** marks last commit before hybrid skin system
+
+### Changed
+
+- Devices list / detail reorganized; DarkSelect portaled; icon picker grouped
+- App icon from `docs/icon2.png`
+
+## [0.5.13] — 2026-08-11
+
+### Changed
+
+- Device detail: Open & tools as compact icon toolbars; discovery as 2-col facts; type+icon unified (presets first, full icon picker on demand)
+
+## [0.5.12] — 2026-08-11
+
+### Changed
+
+- Devices list: single compact action strip (open / ping / DNS / rename / detail) instead of scattered button piles
+- Icon picker: grouped by Network / Compute / Media / Home — no flat icon dump
+- Type presets: fixed grid; detail tools split into Open + Diagnostics
+
+## [0.5.11] — 2026-08-11
+
+### Fixed
+
+- Layout root cause: `.glass-panel { position: relative }` overrode sidebar `position: fixed` → main sat under the rail; sidebar is fixed again, content top-aligned with sidebar and centered in free area
+
+## [0.5.10] — 2026-08-11
+
+### Fixed
+
+- axe-core (Playwright Chromium): Login landmarks, Devices empty `<th>`, DarkSelect listbox name / required children / scrollable focus
+- Audit script: `frontend/scripts/axe-audit.mjs` — 0 violations on all routes + open dropdown
+
+## [0.5.9] — 2026-08-11
+
+### Fixed
+
+- UI a11y: focus-visible rings; DarkSelect keyboard (arrows/Enter/Esc); sidebar `aria-label`
+- Icon asset: `icon2.png` resized 1254→256 for public use (~1.3MB → ~100KB)
+- Narrow viewports: main padding no longer crushed under expanded sidebar width
+
+## [0.5.8] — 2026-08-11
+
+### Changed
+
+- App icon switched to `docs/icon2.png` (favicon, login, sidebar)
+
+## [0.5.7] — 2026-08-11
+
+### Fixed
+
+- Dropdowns: shared dark `DarkSelect` portaled to `document.body` with `position: fixed` + z-index 10050 — never clipped under cards, always on top
+- Devices status filter uses the same dropdown style as Scans subnet
+
+## [0.5.6] — 2026-08-11
+
+### Changed
+
+- App icon from `docs/icon.png` / `docs/icon.ico`: favicon, apple-touch-icon, login + sidebar brand mark
+
+## [0.5.5] — 2026-08-11
+
+### Fixed
+
+- Scans: single solid dark subnet combobox (uiverse-style) — presets + custom CIDR inside the same panel; no separate field, no white OS select
+- Layout: main content hard-pinned to sidebar top (no mid-page float under the rail)
+
 ## [0.5.4] — 2026-08-11
 
 ### Added

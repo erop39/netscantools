@@ -1,4 +1,10 @@
-import { DEVICE_ICONS, DeviceIcon, type DeviceIconKey } from "../lib/deviceIcons";
+import {
+  DEVICE_ICONS,
+  DeviceIcon,
+  ICON_GROUPS,
+  iconLabel,
+  type DeviceIconKey,
+} from "../lib/deviceIcons";
 
 type Props = {
   value: string | null;
@@ -6,52 +12,54 @@ type Props = {
 };
 
 export function IconPicker({ value, onChange }: Props) {
+  const selectedLabel = value ? iconLabel(value) : null;
+
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-white/45">
-          Icon
-        </span>
-        {value && (
-          <button
-            type="button"
-            className="btn-ghost h-7 text-[11px]"
-            onClick={() => onChange(null)}
-          >
-            Clear
-          </button>
-        )}
-      </div>
-      <div className="icon-picker-grid">
-        {DEVICE_ICONS.map((item) => {
-          const selected = value === item.key;
-          return (
-            <button
-              key={item.key}
-              type="button"
-              title={item.label}
-              aria-label={item.label}
-              aria-pressed={selected}
-              className={`icon-picker-item ${selected ? "is-selected" : ""}`}
-              onClick={() => onChange(item.key)}
-            >
-              <DeviceIcon name={item.key} size={18} />
+    <div className="icon-picker">
+      <div className="icon-picker-head">
+        <span className="icon-picker-title">Icon</span>
+        <div className="icon-picker-head-actions">
+          {selectedLabel && (
+            <span className="icon-picker-selected" title={value ?? undefined}>
+              <DeviceIcon name={value} size={14} />
+              {selectedLabel}
+            </span>
+          )}
+          {value && (
+            <button type="button" className="icon-picker-clear" onClick={() => onChange(null)}>
+              Clear
             </button>
-          );
-        })}
+          )}
+        </div>
       </div>
-      <p className="mt-2 text-[11px] text-white/40">
-        Inspired by{" "}
-        <a
-          href="https://semantic-ui.com/elements/icon.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="link-accent"
-        >
-          Semantic UI icons
-        </a>
-        {value ? ` · selected: ${value}` : ""}
-      </p>
+
+      <div className="icon-picker-body">
+        {ICON_GROUPS.map((group) => (
+          <section key={group.id} className="icon-picker-group">
+            <h4 className="icon-picker-group-label">{group.label}</h4>
+            <div className="icon-picker-grid" role="listbox" aria-label={group.label}>
+              {group.keys.map((key) => {
+                const meta = DEVICE_ICONS.find((i) => i.key === key);
+                const selected = value === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="option"
+                    title={meta?.label ?? key}
+                    aria-label={meta?.label ?? key}
+                    aria-selected={selected}
+                    className={`icon-picker-item ${selected ? "is-selected" : ""}`}
+                    onClick={() => onChange(key)}
+                  >
+                    <DeviceIcon name={key} size={18} />
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
