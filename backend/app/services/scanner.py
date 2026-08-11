@@ -5,6 +5,7 @@ from __future__ import annotations
 import ipaddress
 import re
 import subprocess
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -26,6 +27,42 @@ _scan_lock = threading.Lock()
 
 class ScanAlreadyRunning(Exception):
     """Raised when a scan is already in progress."""
+
+
+def _console_encoding() -> str:
+    """Encoding for Windows console tools (arp/ping).
+
+    Russian Windows emits OEM/cp866, not UTF-8. Using text=True+utf-8
+    yields empty stdout and zero discovered hosts.
+    """
+    if sys.platform == "win32":
+        return "oem"
+    return "utf-8"
+
+
+def _decode_console(data: bytes | None) -> str:
+    if not data:
+        return ""
+    enc = _console_encoding()
+    try:
+        return data.decode(enc)
+    except UnicodeDecodeError:
+        return data.decode(enc, errors="replace")
+
+
+def _run_capture(args: list[str], timeout: float) -> tuple[int, str, str]:
+    """Run a process; return (returncode, stdout, stderr) with console encoding."""
+    result = subprocess.run(
+        args,
+        capture_output=True,
+        timeout=timeout,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    return (
+        result.returncode,
+        _decode_console(result.stdout),
+        _decode_console(result.stderr),
+    )
 
 
 def parse_arp_a(output: str) -> dict[str, str]:
@@ -58,16 +95,19 @@ def hosts_in_subnet(cidr: str) -> list[str]:
 
 
 def ping_host(ip: str) -> bool:
-    """Windows ICMP ping: single probe, 500ms timeout."""
+    """Windows ICMP ping: single probe, 800ms timeout.
+
+    Prefer TTL marker when present (avoids false OK on some Windows errors).
+    """
     try:
-        result = subprocess.run(
-            ["ping", "-n", "1", "-w", "500", ip],
-            capture_output=True,
-            text=True,
-            timeout=3,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-        return result.returncode == 0
+        code, out, _ = _run_capture(["ping", "-n", "1", "-w", "800", ip], timeout=4)
+        out_u = out.upper()
+        if "TTL=" in out_u:
+            return True
+        # Fallback: success returncode without unreachable markers
+        if code == 0 and "unreachable" not in out.lower() and "недоступ" not in out.lower():
+            return True
+        return False
     except (subprocess.TimeoutExpired, OSError):
         return False
 
@@ -91,14 +131,11 @@ def run_ping_sweep(subnet: str, concurrency: int = 50) -> list[str]:
 
 
 def get_arp_table() -> str:
-    result = subprocess.run(
-        ["arp", "-a"],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-    )
-    return result.stdout or ""
+    try:
+        _, out, _ = _run_capture(["arp", "-a"], timeout=30)
+        return out
+    except (subprocess.TimeoutExpired, OSError):
+        return ""
 
 
 def _get_setting_value(db: Session, key: str, default: str) -> str:

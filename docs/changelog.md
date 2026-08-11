@@ -12,6 +12,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.4.2] — 2026-08-11
+
+### Fixed
+
+- Network scan found 0 devices on Russian Windows: `arp -a` / `ping` output was decoded as UTF-8 and became empty. Now uses Windows OEM console encoding.
+
 ## [0.4.1] — 2026-08-11
 
 ### Changed
