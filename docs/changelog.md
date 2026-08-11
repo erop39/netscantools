@@ -17,7 +17,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Restored real glass (translucent + blur): removed dark content scrim and opaque card/input fills
-- Layout rewrite: flex row shell so main content top matches sidebar top (no fixed-sidebar offset bug)
+- Sidebar back to compact floating size (top/bottom inset, not full-height stretch)
+- Main content horizontally centered; top aligned with sidebar
 
 ## [0.5.2] — 2026-08-11
 

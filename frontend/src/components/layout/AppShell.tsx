@@ -30,7 +30,9 @@ export function AppShell() {
     <div className={`app-shell ${collapsed ? "is-sidebar-collapsed" : ""}`}>
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <main className="app-main">
-        <Outlet />
+        <div className="app-main-inner">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

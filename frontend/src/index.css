@@ -101,42 +101,40 @@ html[data-bg="gradient"] .app-scene::after {
   min-height: 100vh;
 }
 
-/* ── App shell: flex row — sidebar + main share the same top ─ */
+/* ── App shell: floating sidebar + centered main ───────── */
 
 .app-shell {
-  --sidebar-expanded: 260px;
-  --sidebar-collapsed: 72px;
+  --sidebar-expanded: 268px;
+  --sidebar-collapsed: 76px;
   --sidebar-w: var(--sidebar-expanded);
-  --shell-pad: 16px;
-  --shell-gap: 16px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start; /* BOTH start at the same top edge */
-  gap: var(--shell-gap);
+  /* floating gaps — not glued to screen edges */
+  --sidebar-top: 24px;
+  --sidebar-left: 24px;
+  --sidebar-bottom: 48px;
+  --main-gap: 28px;
+  --main-pad-x: 28px;
   min-height: 100vh;
-  padding: var(--shell-pad);
 }
 
 .app-shell.is-sidebar-collapsed {
   --sidebar-w: var(--sidebar-collapsed);
 }
 
+/* Compact floating rail (top + bottom inset, not full viewport stretch) */
 .sidebar-shell {
-  position: sticky;
-  top: var(--shell-pad);
+  position: fixed;
+  top: var(--sidebar-top);
+  left: var(--sidebar-left);
+  bottom: var(--sidebar-bottom);
   z-index: 30;
-  flex: 0 0 var(--sidebar-w);
   width: var(--sidebar-w);
-  height: calc(100vh - var(--shell-pad) * 2);
-  max-height: calc(100vh - var(--shell-pad) * 2);
+  height: auto; /* height from top/bottom only */
+  max-height: none;
   display: flex;
   flex-direction: column;
-  padding: 12px 10px;
-  transition: flex-basis 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  padding: 14px 12px;
+  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: visible;
-  align-self: flex-start;
 }
 
 .sidebar-shell.glass-panel {
@@ -272,19 +270,27 @@ html[data-bg="gradient"] .app-scene::after {
   background: rgb(248 113 113 / 10%) !important;
 }
 
-/* Main — same flex row top as sidebar, no extra top offset */
+/* Main column: top = sidebar top; content block centered horizontally */
 .app-main {
   box-sizing: border-box;
   position: relative;
   z-index: 1;
-  flex: 1 1 auto;
-  min-width: 0;
-  /* NO padding-top — top edge matches sidebar */
-  padding: 0 8px 32px 0;
-  margin: 0;
-  align-self: flex-start;
+  min-height: 100vh;
+  /* top aligns with floating sidebar */
+  padding-top: var(--sidebar-top);
+  padding-right: var(--main-pad-x);
+  padding-bottom: 40px;
+  padding-left: calc(var(--sidebar-left) + var(--sidebar-w) + var(--main-gap));
+  transition: padding-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* horizontal center of content block */
+}
+
+.app-main-inner {
   width: 100%;
-  max-width: 72rem;
+  max-width: 68rem;
+  margin: 0 auto;
 }
 
 /* Collapsed: pure icon rail */
@@ -1082,9 +1088,9 @@ textarea.glass-input {
 /* ── Misc ──────────────────────────────────────────────── */
 
 .page-header {
-  /* Align title baseline with sidebar logo (~12px inner pad) */
-  margin: 0 0 0.75rem;
-  padding-top: 10px;
+  /* Align with sidebar inner logo row */
+  margin: 0 0 1rem;
+  padding-top: 12px;
   min-height: 0;
 }
 
