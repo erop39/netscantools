@@ -31,9 +31,10 @@ export function DeviceIconTrigger({
   const panelRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
-  useLayoutEffect(() => {
-    if (!open || !btnRef.current) return;
-    const r = btnRef.current.getBoundingClientRect();
+  function updatePos() {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
     const width = Math.min(320, Math.max(260, window.innerWidth - 24));
     let left = r.left;
     if (left + width > window.innerWidth - 12) {
@@ -46,6 +47,11 @@ export function DeviceIconTrigger({
       left,
       width,
     });
+  }
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePos();
   }, [open]);
 
   useEffect(() => {
@@ -59,18 +65,27 @@ export function DeviceIconTrigger({
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
-    function onScroll() {
-      setOpen(false);
+    /** Keep open while scrolling inside the popover; only re-pin or close on outer scroll */
+    function onScroll(e: Event) {
+      const t = e.target;
+      if (t instanceof Node && panelRef.current?.contains(t)) {
+        return; // user scrolling the icon list
+      }
+      // table/page scroll: keep picker open, follow the trigger
+      updatePos();
+    }
+    function onResize() {
+      updatePos();
     }
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", onResize);
     };
   }, [open]);
 
