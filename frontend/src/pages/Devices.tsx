@@ -226,7 +226,7 @@ export function Devices() {
               type="button"
               disabled={bulkBusy || devices.length === 0}
               onClick={() => void onResolveAll()}
-              className={btnSecondaryClassName + " h-[40px]"}
+              className={btnSecondaryClassName}
               title="Reverse-DNS all devices with an IP"
             >
               {bulkBusy ? "Resolving…" : "Resolve all"}
@@ -238,7 +238,7 @@ export function Devices() {
                 downloadHtmlReport(devices);
                 setBanner("HTML report downloaded");
               }}
-              className={btnSecondaryClassName + " h-[40px]"}
+              className={btnSecondaryClassName}
             >
               HTML
             </button>
@@ -253,7 +253,7 @@ export function Devices() {
                   setError(e instanceof Error ? e.message : "PDF export failed");
                 }
               }}
-              className={btnPrimaryClassName + " h-[40px]"}
+              className={btnPrimaryClassName}
             >
               PDF
             </button>
@@ -288,7 +288,7 @@ export function Devices() {
           className={`${fieldClassName} devices-search`}
           aria-label="Search devices"
         />
-        <button type="submit" className={btnSecondaryClassName + " h-[40px] shrink-0"}>
+        <button type="submit" className={btnSecondaryClassName + " shrink-0"}>
           Search
         </button>
         {!loading && (
@@ -360,7 +360,7 @@ export function Devices() {
                                 if (e.key === "Escape") setRenamingId(null);
                               }}
                               placeholder="Friendly name"
-                              className={`${fieldClassName} h-[36px]`}
+                              className={fieldClassName}
                               aria-label="Device name"
                             />
                             <div className="devices-rename-actions">

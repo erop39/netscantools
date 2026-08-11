@@ -12,6 +12,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.7.2] — 2026-08-11
+
+### Changed
+
+- Global compact controls: primary/danger ~34px, secondary ~32px, inputs 36px (was 44)
+
 ## [0.7.1] — 2026-08-11
 
 ### Changed

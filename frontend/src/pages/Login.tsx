@@ -81,7 +81,7 @@ export function Login() {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="glass-input h-[48px] text-[14px]"
+              className="glass-input"
               required
             />
           </label>
@@ -93,7 +93,7 @@ export function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="glass-input h-[48px] text-[14px]"
+              className="glass-input"
               required
             />
           </label>
@@ -104,7 +104,7 @@ export function Login() {
             </div>
           )}
 
-          <button type="submit" disabled={submitting} className="btn-primary mt-2 h-[48px] w-full text-[14px]">
+          <button type="submit" disabled={submitting} className="btn-primary mt-2 w-full">
             {submitting ? (
               <>
                 <span className="spinner !border-[rgb(4_16_24/30%)] !border-t-[rgb(4_16_24/90%)]" />

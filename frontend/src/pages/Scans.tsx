@@ -369,7 +369,7 @@ export function Scans() {
                     type="button"
                     disabled={saving || starting || !dirty}
                     onClick={() => void saveSettings()}
-                    className={btnSecondaryClassName + " h-[44px] px-4 text-sm"}
+                    className={btnSecondaryClassName}
                   >
                     {saving && !starting ? "Saving…" : "Save"}
                   </button>

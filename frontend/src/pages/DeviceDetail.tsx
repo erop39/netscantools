@@ -236,7 +236,7 @@ export function DeviceDetail() {
         title={device ? deviceLabel(device) : "Device detail"}
         description={device ? device.mac : "Edit inventory fields"}
         actions={
-          <Link to="/devices" className={`${btnSecondaryClassName} h-[40px]`}>
+          <Link to="/devices" className={btnSecondaryClassName}>
             ← Devices
           </Link>
         }
