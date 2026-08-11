@@ -9,58 +9,66 @@ export function formatDateTime(value: string | null | undefined): string {
   }
 }
 
-export function StatusBadge({ status }: { status: string }) {
+function statusClass(status: string): string {
   const s = status.toLowerCase();
-  const colors =
-    s === "online"
-      ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/30"
-      : s === "offline"
-        ? "bg-red-500/20 text-red-200 border-red-400/30"
-        : s === "running"
-          ? "bg-sky-500/20 text-sky-200 border-sky-400/30"
-          : s === "completed" || s === "done" || s === "success"
-            ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/30"
-            : s === "failed" || s === "error"
-              ? "bg-red-500/20 text-red-200 border-red-400/30"
-              : "bg-white/10 text-white/70 border-white/15";
+  if (s === "online") return "is-online";
+  if (s === "offline") return "is-offline";
+  if (s === "running") return "is-running";
+  if (s === "completed" || s === "done" || s === "success") return "is-success";
+  if (s === "failed" || s === "error") return "is-failed";
+  return "is-unknown";
+}
 
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${colors}`}
-    >
-      {status}
-    </span>
-  );
+export function StatusBadge({ status }: { status: string }) {
+  return <span className={`status-badge ${statusClass(status)}`}>{status}</span>;
 }
 
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-3 py-10 text-white/60">
-      <span
-        className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white/70"
-        aria-hidden
-      />
-      <span>{label}</span>
+    <div className="flex items-center gap-3 py-12 text-[var(--text-muted)]">
+      <span className="spinner" aria-hidden />
+      <span className="text-sm">{label}</span>
     </div>
   );
 }
 
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <div
-      className="rounded-[12px] border border-red-400/30 bg-red-500/20 px-4 py-3 text-sm text-red-50 shadow-[inset_0_1px_0_rgb(255_255_255/8%)] backdrop-blur-md"
-      role="alert"
-    >
-      {message}
+    <div className="banner banner-error" role="alert">
+      <span aria-hidden>⚠</span>
+      <span>{message}</span>
+    </div>
+  );
+}
+
+export function InfoBanner({ message }: { message: string }) {
+  return (
+    <div className="banner banner-info" role="status">
+      <span>{message}</span>
+    </div>
+  );
+}
+
+export function SuccessBanner({ message }: { message: string }) {
+  return (
+    <div className="banner banner-success" role="status">
+      <span>{message}</span>
     </div>
   );
 }
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="glass-card border-dashed px-6 py-12 text-center">
-      <p className="text-white/80">{title}</p>
-      {hint && <p className="mt-1 text-sm text-white/50">{hint}</p>}
+    <div className="empty-state">
+      <div className="empty-state-icon" aria-hidden>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 8v5" />
+          <path d="M12 16h.01" />
+        </svg>
+      </div>
+      <p className="text-[15px] font-medium text-white/90">{title}</p>
+      {hint && <p className="mx-auto mt-1.5 max-w-sm text-sm text-[var(--text-muted)]">{hint}</p>}
     </div>
   );
 }
@@ -75,6 +83,29 @@ export function GlassCard({
   return <div className={`glass-card p-5 ${className}`}>{children}</div>;
 }
 
+export function StatCard({
+  label,
+  value,
+  hint,
+  footer,
+  success,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+  footer?: ReactNode;
+  success?: boolean;
+}) {
+  return (
+    <div className="stat-card">
+      <p className="stat-label">{label}</p>
+      <div className={`stat-value ${success ? "is-success" : ""}`}>{value}</div>
+      {hint && <p className="mt-1.5 text-xs text-[var(--text-muted)]">{hint}</p>}
+      {footer && <div className="mt-3 relative z-[1]">{footer}</div>}
+    </div>
+  );
+}
+
 export function PageHeader({
   title,
   description,
@@ -87,24 +118,18 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white/95 drop-shadow-sm">
-          {title}
-        </h1>
-        {description && <p className="mt-1 text-sm text-white/60">{description}</p>}
+        <h1 className="page-title">{title}</h1>
+        {description && <p className="page-desc">{description}</p>}
       </div>
-      {actions}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
 
-export const fieldClassName =
-  "glass-input h-[44px] w-full px-3 text-sm";
+/** @deprecated use btn-secondary / class strings below */
+export const fieldClassName = "glass-input";
 
-export const btnPrimaryClassName =
-  "btn-glass inline-flex h-[44px] items-center justify-center px-4 text-sm font-medium";
-
-export const btnSecondaryClassName =
-  "btn-glass inline-flex h-[36px] items-center justify-center px-3 text-xs font-medium";
-
-export const btnDangerClassName =
-  "inline-flex h-[44px] items-center justify-center rounded-[10px] border border-red-400/35 bg-red-500/20 px-4 text-sm font-medium text-red-50 shadow-[0_2px_8px_rgb(0_0_0/18%),inset_0_1px_0_rgb(255_255_255/10%)] transition-colors hover:bg-red-500/30 disabled:opacity-50";
+export const btnPrimaryClassName = "btn-primary";
+export const btnSecondaryClassName = "btn-secondary";
+export const btnDangerClassName = "btn-danger";
+export const btnGhostClassName = "btn-ghost";

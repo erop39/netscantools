@@ -53,7 +53,10 @@ export function Login() {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-white/70">Loading…</div>
+      <div className="flex min-h-screen items-center justify-center gap-3 text-[var(--text-muted)]">
+        <span className="spinner" />
+        <span className="text-sm">Loading…</span>
+      </div>
     );
   }
 
@@ -62,52 +65,54 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="glass-panel w-full max-w-md p-8">
+    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="login-card">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/12 shadow-inner ring-1 ring-white/15">
-            <span className="text-lg font-bold text-white/95">q</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white/95">qube.li</h1>
-          <p className="mt-1 text-sm text-white/60">NetInventory</p>
+          <div className="login-logo">q</div>
+          <h1 className="text-xl font-semibold tracking-tight text-white">qube.li</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">NetInventory · sign in</p>
         </div>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex flex-col gap-1.5 text-[12.5px] font-medium text-[var(--text-muted)]">
             Username
             <input
               type="text"
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="glass-input h-[50px] px-4"
+              className="glass-input h-[48px] text-[14px]"
               required
             />
           </label>
 
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex flex-col gap-1.5 text-[12.5px] font-medium text-[var(--text-muted)]">
             Password
             <input
               type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="glass-input h-[50px] px-4"
+              className="glass-input h-[48px] text-[14px]"
               required
             />
           </label>
 
           {error && (
-            <p
-              className="rounded-[10px] border border-red-400/30 bg-red-500/20 px-3 py-2 text-sm text-red-100"
-              role="alert"
-            >
+            <div className="banner banner-error" role="alert">
               {error}
-            </p>
+            </div>
           )}
 
-          <button type="submit" disabled={submitting} className="btn-glass mt-2 h-[50px] text-[15px] font-medium">
-            {submitting ? "Signing in…" : "Sign in"}
+          <button type="submit" disabled={submitting} className="btn-primary mt-2 h-[48px] w-full text-[14px]">
+            {submitting ? (
+              <>
+                <span className="spinner !border-[rgb(4_16_24/30%)] !border-t-[rgb(4_16_24/90%)]" />
+                Signing in…
+              </>
+            ) : (
+              "Sign in"
+            )}
           </button>
         </form>
       </div>

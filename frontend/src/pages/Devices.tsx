@@ -284,8 +284,8 @@ export function Devices() {
       )}
 
       {!loading && !error && devices.length > 0 && (
-        <div className="glass-card overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
+        <div className="glass-card data-table-wrap overflow-x-auto p-0">
+          <table className="data-table min-w-full text-left">
             <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-white/50">
               <tr>
                 <th className="px-4 py-3 font-medium">Status</th>

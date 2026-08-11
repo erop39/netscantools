@@ -8,6 +8,7 @@ import {
   GlassCard,
   LoadingState,
   PageHeader,
+  StatCard,
   StatusBadge,
 } from "../components/ui";
 import type { Dashboard } from "../types";
@@ -52,62 +53,60 @@ export function Home() {
       {!loading && !error && data && (
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <GlassCard>
-              <p className="text-sm text-white/55">Online devices</p>
-              <p className="mt-2 text-3xl font-semibold text-emerald-200">
-                {data.online_count}
-                <span className="ml-2 text-lg font-normal text-white/45">
-                  / {data.total_count}
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-white/45">currently online / total</p>
-            </GlassCard>
+            <StatCard
+              label="Online devices"
+              success
+              value={
+                <>
+                  {data.online_count}
+                  <span className="ml-1.5 text-lg font-medium text-white/40">
+                    / {data.total_count}
+                  </span>
+                </>
+              }
+              hint="currently online / total"
+            />
 
-            <GlassCard>
-              <p className="text-sm text-white/55">Total inventory</p>
-              <p className="mt-2 text-3xl font-semibold text-white/95">{data.total_count}</p>
-              <Link
-                to="/devices"
-                className="mt-2 inline-block text-sm text-sky-300/90 hover:text-sky-200"
-              >
-                View devices →
-              </Link>
-            </GlassCard>
+            <StatCard
+              label="Total inventory"
+              value={data.total_count}
+              footer={
+                <Link to="/devices" className="link-accent text-sm">
+                  View devices →
+                </Link>
+              }
+            />
 
-            <GlassCard className="sm:col-span-2 xl:col-span-1">
-              <p className="text-sm text-white/55">Last scan</p>
+            <div className="stat-card sm:col-span-2 xl:col-span-1">
+              <p className="stat-label">Last scan</p>
               {data.last_scan ? (
-                <div className="mt-2 space-y-1.5">
-                  <div className="flex items-center gap-2">
+                <div className="relative z-[1] mt-3 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={data.last_scan.status} />
-                    <span className="text-sm text-white/70">{data.last_scan.subnet}</span>
+                    <span className="font-mono text-sm text-white/70">{data.last_scan.subnet}</span>
                   </div>
-                  <p className="text-sm text-white/80">
+                  <p className="text-sm text-white/85">
                     {formatDateTime(data.last_scan.started_at)}
                   </p>
-                  <p className="text-xs text-white/50">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Found {data.last_scan.devices_found} · New {data.last_scan.new_devices}
                   </p>
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-white/55">No scans yet</p>
               )}
-              <Link
-                to="/scans"
-                className="mt-3 inline-block text-sm text-sky-300/90 hover:text-sky-200"
-              >
+              <Link to="/scans" className="link-accent relative z-[1] mt-3 inline-block text-sm">
                 Open scans →
               </Link>
-            </GlassCard>
+            </div>
           </div>
 
           <GlassCard>
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-medium text-white/90">Recent activity</h2>
-              <Link
-                to="/notifications"
-                className="text-sm text-sky-300/90 hover:text-sky-200"
-              >
+              <h2 className="text-[15px] font-semibold tracking-tight text-white/95">
+                Recent activity
+              </h2>
+              <Link to="/notifications" className="link-accent text-sm">
                 All notifications →
               </Link>
             </div>
