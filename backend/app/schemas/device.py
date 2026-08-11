@@ -84,6 +84,23 @@ class DeviceOut(BaseModel):
     notes: str | None
     first_seen: datetime
     updated_at: datetime
+    # Hygiene / LAN security fields
+    latency_ms: float | None = None
+    open_ports: list | None = None
+    ports_scanned_at: datetime | None = None
+    security_score: int | None = None
+    is_new: bool = False
+    # Populated on GET by id only (via to_device_out(..., with_breakdown=True))
+    score_breakdown: list[dict] | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class DeviceEventOut(BaseModel):
+    id: int
+    type: str
+    details: dict | None = None
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 
