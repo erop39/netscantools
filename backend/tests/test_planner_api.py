@@ -32,7 +32,7 @@ def test_create_slot_and_port(client, db_session):
     })
     assert r.status_code == 200
     slot = r.json()
-    assert slot["device_mac"] == "AA:BB:CC:DD:EE:01"
+    assert slot["device_mac"] == "aa:bb:cc:dd:ee:01"
     assert slot["live_ip"] == "192.168.1.50"
     assert slot["match"] == "mismatch"
 

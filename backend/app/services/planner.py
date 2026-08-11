@@ -20,16 +20,17 @@ _MAC_PART = re.compile(r"^[0-9A-Fa-f]{1,2}$")
 
 
 def normalize_mac(mac: str | None) -> str | None:
-    """Normalize MAC to uppercase colon form (AA:BB:CC:DD:EE:FF).
+    """Normalize MAC to lowercase colon form (aa:bb:cc:dd:ee:ff).
 
     Accepts colon or hyphen separators. Empty/None → None. Invalid → ValueError.
+    Project MAC canon: lowercase everywhere (same as device_diff).
     """
     if mac is None:
         return None
     cleaned = mac.strip()
     if not cleaned:
         return None
-    cleaned = cleaned.upper().replace("-", ":")
+    cleaned = cleaned.lower().replace("-", ":")
     parts = cleaned.split(":")
     if len(parts) != 6 or not all(_MAC_PART.fullmatch(p) for p in parts):
         raise ValueError(f"Invalid MAC: {mac}")
@@ -44,10 +45,28 @@ def ip_in_cidr(ip: str, cidr: str) -> bool:
         return False
 
 
+def _rewrite_slot_macs_lowercase(db: Session, plan: NetworkPlan) -> None:
+    """Write-back uppercase/mixed device_mac values to lowercase canon."""
+    dirty = False
+    for slot in plan.slots:
+        if not slot.device_mac:
+            continue
+        try:
+            norm = normalize_mac(slot.device_mac)
+        except ValueError:
+            continue
+        if norm and norm != slot.device_mac:
+            slot.device_mac = norm
+            dirty = True
+    if dirty:
+        db.commit()
+
+
 def ensure_plan(db: Session) -> NetworkPlan:
     """Return the singleton network plan, creating it if missing."""
     plan = db.query(NetworkPlan).first()
     if plan is not None:
+        _rewrite_slot_macs_lowercase(db, plan)
         return plan
 
     cidr: str | None = None
@@ -174,7 +193,7 @@ def _match_badge(
 
 
 def _devices_by_mac(db: Session) -> dict[str, Device]:
-    """Map normalized uppercase MAC → Device (case-insensitive inventory keys)."""
+    """Map normalized lowercase MAC → Device (case-insensitive inventory keys)."""
     result: dict[str, Device] = {}
     for device in db.query(Device).all():
         try:
@@ -429,7 +448,7 @@ def list_candidates(db: Session) -> list[Device]:
         try:
             key = normalize_mac(slot.device_mac)
         except ValueError:
-            key = slot.device_mac.upper() if slot.device_mac else None
+            key = slot.device_mac.lower() if slot.device_mac else None
         if key:
             bound.add(key)
 

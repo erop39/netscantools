@@ -15,9 +15,13 @@ def test_scan_applies_latency_and_ports(db_session, monkeypatch):
         "app.services.nettools.ping_detail",
         lambda ip, count=1, timeout_ms=800: type("R", (), {"ok": True, "ip": ip, "rtt_ms": 12.5, "message": "ok"})(),
     )
-    # ensure quick_ports setting exists
+    # override quick_ports (default seeded by ensure_default_settings)
     from app.models.setting import Setting
-    db_session.add(Setting(key="quick_ports", value="80,443"))
+    row = db_session.query(Setting).filter_by(key="quick_ports").first()
+    if row is None:
+        db_session.add(Setting(key="quick_ports", value="80,443"))
+    else:
+        row.value = "80,443"
     db_session.commit()
 
     scan = scanner_mod.run_scan_job(db_session)

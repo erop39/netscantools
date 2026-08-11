@@ -13,9 +13,18 @@ def test_get_default_settings(client):
     assert body["scan_subnet"] == "192.168.1.0/24"
     assert body["scan_interval_minutes"] == 0
     assert body["scan_ports"] == "80,443,8080"
+    assert body["quick_ports"] == "22,80,443,445,3389,8080,8443"
     assert body["ui_background"] == "default"
     assert body["ui_background_url"] == "/bg.jpg"
     assert body["has_custom_background"] is False
+
+
+def test_settings_include_quick_ports(client):
+    r = client.post("/api/auth/login", json={"username": "admin", "password": "admin"})
+    assert r.status_code == 200
+    r = client.get("/api/settings")
+    assert r.status_code == 200
+    assert "quick_ports" in r.json()
 
 
 def test_put_settings_valid(client):
@@ -26,6 +35,7 @@ def test_put_settings_valid(client):
             "scan_subnet": "10.0.0.0/24",
             "scan_interval_minutes": 30,
             "scan_ports": "80,443,8443",
+            "quick_ports": "22,80,443",
             "ui_background": "solid",
         },
     )
@@ -34,12 +44,14 @@ def test_put_settings_valid(client):
     assert body["scan_subnet"] == "10.0.0.0/24"
     assert body["scan_interval_minutes"] == 30
     assert body["scan_ports"] == "80,443,8443"
+    assert body["quick_ports"] == "22,80,443"
     assert body["ui_background"] == "solid"
     assert body["ui_background_url"] is None
 
     r2 = client.get("/api/settings")
     assert r2.json()["scan_subnet"] == "10.0.0.0/24"
     assert r2.json()["ui_background"] == "solid"
+    assert r2.json()["quick_ports"] == "22,80,443"
 
 
 def test_put_settings_invalid_cidr(client):
@@ -50,6 +62,7 @@ def test_put_settings_invalid_cidr(client):
             "scan_subnet": "not-a-cidr",
             "scan_interval_minutes": 10,
             "scan_ports": "80",
+            "quick_ports": "80",
             "ui_background": "default",
         },
     )
@@ -64,6 +77,7 @@ def test_put_settings_negative_interval(client):
             "scan_subnet": "192.168.1.0/24",
             "scan_interval_minutes": -1,
             "scan_ports": "80",
+            "quick_ports": "80",
             "ui_background": "default",
         },
     )
@@ -78,6 +92,22 @@ def test_put_settings_invalid_ports(client):
             "scan_subnet": "192.168.1.0/24",
             "scan_interval_minutes": 0,
             "scan_ports": "80,abc",
+            "quick_ports": "80",
+            "ui_background": "default",
+        },
+    )
+    assert r.status_code == 422
+
+
+def test_put_settings_invalid_quick_ports(client):
+    _login(client)
+    r = client.put(
+        "/api/settings",
+        json={
+            "scan_subnet": "192.168.1.0/24",
+            "scan_interval_minutes": 0,
+            "scan_ports": "80",
+            "quick_ports": "80,abc",
             "ui_background": "default",
         },
     )
@@ -92,6 +122,7 @@ def test_put_custom_without_upload_fails(client):
             "scan_subnet": "192.168.1.0/24",
             "scan_interval_minutes": 0,
             "scan_ports": "80",
+            "quick_ports": "80",
             "ui_background": "custom",
         },
     )

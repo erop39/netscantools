@@ -16,6 +16,7 @@ DEFAULT_SETTINGS = {
     "scan_subnet": "192.168.1.0/24",
     "scan_interval_minutes": "0",
     "scan_ports": "80,443,8080",
+    "quick_ports": "22,80,443,445,3389,8080,8443",
     # UI appearance: default | solid | gradient | custom
     "ui_background": "default",
 }

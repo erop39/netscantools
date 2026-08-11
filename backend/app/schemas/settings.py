@@ -10,6 +10,7 @@ class SettingsOut(BaseModel):
     scan_subnet: str
     scan_interval_minutes: int
     scan_ports: str
+    quick_ports: str
     ui_background: str
     # Resolved URL for the scene image (null for solid/gradient)
     ui_background_url: str | None = None
@@ -20,6 +21,7 @@ class SettingsUpdate(BaseModel):
     scan_subnet: str
     scan_interval_minutes: int
     scan_ports: str
+    quick_ports: str
     ui_background: str = "default"
 
     @field_validator("scan_subnet")
@@ -41,15 +43,15 @@ class SettingsUpdate(BaseModel):
             raise ValueError("scan_interval_minutes must be >= 0")
         return v
 
-    @field_validator("scan_ports")
+    @field_validator("scan_ports", "quick_ports")
     @classmethod
     def validate_ports(cls, v: str) -> str:
         value = (v or "").strip()
         if not value:
-            raise ValueError("scan_ports is required")
+            raise ValueError("port list is required")
         parts = [p.strip() for p in value.split(",") if p.strip()]
         if not parts:
-            raise ValueError("scan_ports must list at least one port")
+            raise ValueError("port list must include at least one port")
         for part in parts:
             if not re.fullmatch(r"\d+", part):
                 raise ValueError(f"Invalid port: {part}")

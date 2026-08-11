@@ -17,6 +17,7 @@ SETTING_KEYS = (
     "scan_subnet",
     "scan_interval_minutes",
     "scan_ports",
+    "quick_ports",
     "ui_background",
 )
 
@@ -33,6 +34,7 @@ def _load_settings(db: Session) -> SettingsOut:
             rows.get("scan_interval_minutes", DEFAULT_SETTINGS["scan_interval_minutes"])
         ),
         scan_ports=rows.get("scan_ports", DEFAULT_SETTINGS["scan_ports"]),
+        quick_ports=rows.get("quick_ports", DEFAULT_SETTINGS["quick_ports"]),
         ui_background=ui_background,
         ui_background_url=bg_svc.resolve_background_url(ui_background),
         has_custom_background=bg_svc.has_custom_background(),
@@ -69,6 +71,7 @@ def update_settings(
     _upsert_setting(db, "scan_subnet", body.scan_subnet)
     _upsert_setting(db, "scan_interval_minutes", str(body.scan_interval_minutes))
     _upsert_setting(db, "scan_ports", body.scan_ports)
+    _upsert_setting(db, "quick_ports", body.quick_ports)
     _upsert_setting(db, "ui_background", body.ui_background)
     db.commit()
     reschedule()
