@@ -9,9 +9,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Planned
 
-- 0.2.0 — Devices CRUD + dashboard
-- 0.3.0 — Windows scanner + Scans + scheduler
-- 0.4.0 — Notifications + Settings + MVP polish
+- (none for MVP)
+
+## [0.2.0] — 2026-08-11
+
+### Added
+
+- Devices list/detail with edit web UI links
+- Home dashboard (online count, last scan, recent activity)
 
 ## [0.1.0] — 2026-08-11
 

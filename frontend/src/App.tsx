@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { DeviceDetail } from "./pages/DeviceDetail";
 import { Devices } from "./pages/Devices";
 import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
@@ -17,6 +18,7 @@ export default function App() {
           <Route element={<AppShell />}>
             <Route index element={<Home />} />
             <Route path="devices" element={<Devices />} />
+            <Route path="devices/:id" element={<DeviceDetail />} />
             <Route path="scans" element={<Scans />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="settings" element={<Settings />} />
