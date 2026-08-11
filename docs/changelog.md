@@ -12,6 +12,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.7.3] — 2026-08-11
+
+### Fixed
+
+- Buttons unified: all variants **32×12px pad, radius 10px** (no pill vs box mix; primary/secondary same size)
+
 ## [0.7.2] — 2026-08-11
 
 ### Changed

@@ -366,7 +366,7 @@ export function Devices() {
                             <div className="devices-rename-actions">
                               <button
                                 type="button"
-                                className={btnPrimaryClassName + " !h-8 !px-3 !text-xs"}
+                                className={btnPrimaryClassName}
                                 disabled={busy}
                                 onClick={() => void saveRename(d)}
                               >
@@ -374,7 +374,7 @@ export function Devices() {
                               </button>
                               <button
                                 type="button"
-                                className={btnSecondaryClassName + " !h-8 !px-3 !text-xs"}
+                                className={btnSecondaryClassName}
                                 onClick={() => setRenamingId(null)}
                               >
                                 Cancel

@@ -473,7 +473,7 @@ export function Planner() {
           <div className="planner-header-actions">
             <button
               type="button"
-              className={`${btnSecondaryClassName} planner-btn`}
+              className={`${btnSecondaryClassName}`}
               disabled={anyBusy || loading || !plan}
               title="Visual network map (print-friendly)"
               onClick={onExportHtml}
@@ -482,7 +482,7 @@ export function Planner() {
             </button>
             <button
               type="button"
-              className={`${btnSecondaryClassName} planner-btn`}
+              className={`${btnSecondaryClassName}`}
               disabled={anyBusy || loading}
               title="Machine-readable backup"
               onClick={() => void onExportJson()}
@@ -491,7 +491,7 @@ export function Planner() {
             </button>
             <button
               type="button"
-              className={`${btnSecondaryClassName} planner-btn`}
+              className={`${btnSecondaryClassName}`}
               disabled={anyBusy || loading}
               onClick={() => importRef.current?.click()}
             >
@@ -508,7 +508,7 @@ export function Planner() {
             />
             <button
               type="button"
-              className={`${btnSecondaryClassName} planner-btn`}
+              className={`${btnSecondaryClassName}`}
               disabled={anyBusy || loading}
               onClick={() => void openInventory()}
             >
@@ -516,7 +516,7 @@ export function Planner() {
             </button>
             <button
               type="button"
-              className={`${btnPrimaryClassName} planner-btn`}
+              className={`${btnPrimaryClassName}`}
               disabled={anyBusy || loading}
               onClick={() => void onAddReserve()}
             >
@@ -584,7 +584,7 @@ export function Planner() {
               </span>
               <button
                 type="button"
-                className={`${btnPrimaryClassName} planner-btn`}
+                className={`${btnPrimaryClassName}`}
                 disabled={metaSaving || anyBusy}
                 onClick={() => void onSaveMeta()}
               >
@@ -604,7 +604,7 @@ export function Planner() {
                 </div>
                 <button
                   type="button"
-                  className={`${btnSecondaryClassName} planner-btn planner-btn--xs`}
+                  className={`${btnSecondaryClassName}`}
                   onClick={() => {
                     setShowInventory(false);
                     setPickMac("");
@@ -632,7 +632,7 @@ export function Planner() {
                   />
                   <button
                     type="button"
-                    className={`${btnPrimaryClassName} planner-btn shrink-0`}
+                    className={`${btnPrimaryClassName} shrink-0`}
                     disabled={!pickMac || inventoryBusy}
                     onClick={() => void onAddFromInventory()}
                   >
@@ -731,7 +731,7 @@ export function Planner() {
 
                       <button
                         type="button"
-                        className={`${btnDangerClassName} planner-btn planner-btn--xs shrink-0`}
+                        className={`${btnDangerClassName} shrink-0`}
                         disabled={anyBusy}
                         onClick={() => void onDeleteSlot(slot)}
                       >
@@ -817,7 +817,7 @@ export function Planner() {
                     <div className="planner-slot-actions">
                       <button
                         type="button"
-                        className={`${btnPrimaryClassName} planner-btn planner-btn--xs`}
+                        className={`${btnPrimaryClassName}`}
                         disabled={busy || anyBusy}
                         onClick={() => void onSaveSlot(slot)}
                       >
@@ -826,7 +826,7 @@ export function Planner() {
                       {draft.device_mac && (
                         <button
                           type="button"
-                          className={`${btnSecondaryClassName} planner-btn planner-btn--xs`}
+                          className={`${btnSecondaryClassName}`}
                           disabled={anyBusy}
                           onClick={() => {
                             updateDraft(slot.id, { device_mac: "" });
@@ -894,7 +894,7 @@ export function Planner() {
                         />
                         <button
                           type="button"
-                          className={`${btnSecondaryClassName} planner-btn planner-btn--xs shrink-0`}
+                          className={`${btnSecondaryClassName} shrink-0`}
                           disabled={anyBusy || !pf.port.trim()}
                           onClick={() => void onAddPort(slot.id)}
                         >
