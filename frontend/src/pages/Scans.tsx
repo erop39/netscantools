@@ -16,6 +16,19 @@ import type { Scan, Settings } from "../types";
 
 const POLL_MS = 2000;
 
+/** Common private LAN ranges (RFC1918 + popular home routers) */
+const SUBNET_PRESETS: { cidr: string; label: string; hint: string }[] = [
+  { cidr: "192.168.1.0/24", label: "192.168.1.x", hint: "Most home routers" },
+  { cidr: "192.168.0.0/24", label: "192.168.0.x", hint: "TP-Link / common default" },
+  { cidr: "192.168.88.0/24", label: "192.168.88.x", hint: "MikroTik" },
+  { cidr: "192.168.31.0/24", label: "192.168.31.x", hint: "Xiaomi / Redmi" },
+  { cidr: "192.168.100.0/24", label: "192.168.100.x", hint: "Some ISPs / CPE" },
+  { cidr: "10.0.0.0/24", label: "10.0.0.x", hint: "Corporate / Docker host" },
+  { cidr: "10.0.1.0/24", label: "10.0.1.x", hint: "Alt 10.x LAN" },
+  { cidr: "172.16.0.0/24", label: "172.16.0.x", hint: "Private 172.16" },
+  { cidr: "172.17.0.0/24", label: "172.17.0.x", hint: "Docker bridge default" },
+];
+
 function parseApiError(err: unknown, fallback: string): string {
   if (!(err instanceof ApiError)) return fallback;
   try {
@@ -270,23 +283,47 @@ export function Scans() {
           ) : (
             <div className="flex flex-col gap-5">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
-                <label className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-5">
-                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">
-                    Subnet (CIDR)
-                  </span>
-                  <input
-                    type="text"
-                    value={scanSubnet}
-                    onChange={(e) => setScanSubnet(e.target.value)}
-                    placeholder="192.168.1.0/24"
-                    spellCheck={false}
-                    className={`${fieldClassName} font-mono text-[15px]`}
-                    aria-label="Scan subnet CIDR"
-                  />
-                  <span className="text-xs text-white/40">
-                    Example: 192.168.0.0/24 — your LAN range
-                  </span>
-                </label>
+                <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-5">
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-white/45">
+                      Subnet (CIDR)
+                    </span>
+                    <input
+                      type="text"
+                      value={scanSubnet}
+                      onChange={(e) => setScanSubnet(e.target.value)}
+                      placeholder="192.168.1.0/24"
+                      spellCheck={false}
+                      className={`${fieldClassName} font-mono text-[15px]`}
+                      aria-label="Scan subnet CIDR"
+                    />
+                  </label>
+                  <div>
+                    <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-white/40">
+                      Quick presets
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SUBNET_PRESETS.map((p) => {
+                        const active = scanSubnet.trim() === p.cidr;
+                        return (
+                          <button
+                            key={p.cidr}
+                            type="button"
+                            title={p.hint}
+                            className={`type-chip font-mono text-[11px] ${active ? "is-selected" : ""}`}
+                            onClick={() => setScanSubnet(p.cidr)}
+                          >
+                            {p.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-white/35">
+                      {SUBNET_PRESETS.find((p) => p.cidr === scanSubnet.trim())?.hint ??
+                        "Custom range — edit the field above"}
+                    </p>
+                  </div>
+                </div>
 
                 <label className="flex flex-col gap-1.5 lg:col-span-3">
                   <span className="text-xs font-medium uppercase tracking-wide text-white/45">
