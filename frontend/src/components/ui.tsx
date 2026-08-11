@@ -25,7 +25,7 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-3 py-12 text-[var(--text-muted)]">
+    <div className="flex items-center gap-3 py-6 text-[var(--text-muted)]">
       <span className="spinner" aria-hidden />
       <span className="text-sm">{label}</span>
     </div>
@@ -116,7 +116,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="page-header flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 className="page-title">{title}</h1>
         {description && <p className="page-desc">{description}</p>}

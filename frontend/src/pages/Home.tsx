@@ -51,8 +51,8 @@ export function Home() {
       {error && <ErrorBanner message={error} />}
 
       {!loading && !error && data && (
-        <div className="flex flex-col gap-6">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <StatCard
               label="Online devices"
               success

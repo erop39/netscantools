@@ -108,9 +108,10 @@ html[data-bg="gradient"] .app-scene::after {
   --sidebar-collapsed: 72px;
   --sidebar-w: var(--sidebar-expanded);
   --sidebar-gap: 16px;
-  --content-pad-x: 24px;
+  /* Content top = same as sidebar top (not lower) */
+  --content-pad-x: 20px;
   --content-pad-y: 16px;
-  --content-left: calc(var(--sidebar-gap) + var(--sidebar-w) + 16px);
+  --content-left: calc(var(--sidebar-gap) + var(--sidebar-w) + 14px);
   min-height: 100vh;
 }
 
@@ -265,11 +266,12 @@ html[data-bg="gradient"] .app-scene::after {
   background: rgb(248 113 113 / 10%) !important;
 }
 
-/* Main column — top-aligned next to sidebar (no dark overlay) */
+/* Main column — top flush with sidebar top edge */
 .app-main {
   box-sizing: border-box;
   min-height: 100vh;
-  padding: var(--content-pad-y) var(--content-pad-x) 48px var(--content-left);
+  /* top padding = sidebar-gap so titles sit next to rail, not mid-page */
+  padding: var(--sidebar-gap) var(--content-pad-x) 40px var(--content-left);
   transition: padding-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -279,6 +281,8 @@ html[data-bg="gradient"] .app-scene::after {
   max-width: 72rem;
   width: 100%;
   margin: 0;
+  /* pull first heading up to align with sidebar logo row */
+  padding-top: 4px;
 }
 
 /* Collapsed: pure icon rail */
@@ -1075,19 +1079,26 @@ textarea.glass-input {
 
 /* ── Misc ──────────────────────────────────────────────── */
 
+.page-header {
+  margin-bottom: 0.85rem;
+}
+
 .page-title {
-  font-size: 1.5rem;
+  margin: 0;
+  font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.03em;
+  line-height: 1.2;
   color: #fff;
   text-shadow:
     0 1px 2px rgb(0 0 0 / 60%),
-    0 2px 24px rgb(0 0 0 / 45%);
+    0 2px 20px rgb(0 0 0 / 40%);
 }
 
 .page-desc {
-  margin-top: 4px;
-  font-size: 13.5px;
+  margin: 0.2rem 0 0;
+  font-size: 13px;
+  line-height: 1.35;
   color: rgb(220 230 245 / 78%);
   text-shadow: 0 1px 8px rgb(0 0 0 / 50%);
 }
@@ -1096,9 +1107,9 @@ textarea.glass-input {
 .settings-stack {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
   max-width: 40rem;
-  padding-bottom: 2rem;
+  padding-bottom: 1.5rem;
 }
 
 .password-field-wrap {
