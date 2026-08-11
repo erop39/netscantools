@@ -12,21 +12,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.6.1] — 2026-08-11
+
+### Changed
+
+- **UI: Classic glass only** — removed Ops Console skin switch, provider, and CSS; stay on floating glass sidebar
+
 ## [0.6.0] — 2026-08-11
 
 ### Added
 
-- **Hybrid UI skins** (runtime switch, localStorage `netpad_ui_skin`):
-  - **Classic** — floating glass sidebar + scenic bg (default / rollback)
-  - **Ops Console** — docked rail, solid surfaces, denser layout
-- Settings → **Interface skin** picker
-- Design proposal: `docs/design-system-proposal-v2.md`
-- Git tag **`pre-ops-ui`** marks last commit before hybrid skin system
-
-### Changed
-
+- Hybrid UI skins (Classic / Ops) — **removed in 0.6.1** (Ops not used)
 - Devices list / detail reorganized; DarkSelect portaled; icon picker grouped
 - App icon from `docs/icon2.png`
+- Git tag **`pre-ops-ui`** classic baseline
 
 ## [0.5.13] — 2026-08-11
 

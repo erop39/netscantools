@@ -11,7 +11,6 @@ import {
   PageHeader,
 } from "../components/ui";
 import { useBackground } from "../theme/BackgroundProvider";
-import { useUiSkin, type UiSkin } from "../theme/UiSkinProvider";
 import type { Settings as SettingsType, UiBackground } from "../types";
 
 const PRESETS: {
@@ -60,7 +59,6 @@ const PRESETS: {
 
 export function Settings() {
   const { setAppearance } = useBackground();
-  const { skin, setSkin } = useUiSkin();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
@@ -377,52 +375,11 @@ export function Settings() {
             </form>
           </GlassCard>
 
-          <GlassCard className="!p-6">
-            <h2 className="mb-1 text-sm font-semibold text-white/95">Interface skin</h2>
-            <p className="mb-4 text-xs text-white/50">
-              Hybrid: switch anytime. Classic = current glass UI. Ops = denser console layout.
-              Stored in this browser only (localStorage).
-            </p>
-            <div className="ui-skin-grid" role="radiogroup" aria-label="Interface skin">
-              {(
-                [
-                  {
-                    id: "classic" as UiSkin,
-                    title: "Classic",
-                    hint: "Floating glass sidebar, scenic background, soft glow — current look.",
-                    preview: "ui-skin-preview--classic",
-                  },
-                  {
-                    id: "ops" as UiSkin,
-                    title: "Ops Console",
-                    hint: "Docked rail, solid surfaces, data-dense tables — modern NOC style.",
-                    preview: "ui-skin-preview--ops",
-                  },
-                ] as const
-              ).map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={skin === opt.id}
-                  className={`ui-skin-option ${skin === opt.id ? "is-selected" : ""}`}
-                  onClick={() => setSkin(opt.id)}
-                >
-                  <div className={`ui-skin-preview ${opt.preview}`} aria-hidden />
-                  <div>
-                    <div className="ui-skin-option-title">{opt.title}</div>
-                    <div className="ui-skin-option-hint">{opt.hint}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </GlassCard>
-
           <form onSubmit={onSubmit} className="flex flex-col gap-5">
           <GlassCard className="!p-6">
             <h2 className="mb-1 text-sm font-semibold text-white/95">Appearance</h2>
             <p className="mb-4 text-xs text-white/50">
-              Background scene. Preview applies immediately; click Save to persist on server.
+              Background behind the glass UI. Preview applies immediately; click Save to persist.
             </p>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
