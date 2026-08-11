@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -8,6 +9,8 @@ from app.db import get_db
 from app.models.plan import PlanPort, PlanSlot
 from app.models.user import User
 from app.schemas.planner import (
+    PlanCandidate,
+    PlanImport,
     PlanOut,
     PlanUpdate,
     PortCreate,
@@ -225,3 +228,45 @@ def delete_port(
     svc.touch_plan(plan)
     db.commit()
     return out
+
+
+@router.get("/export")
+def export_plan(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> JSONResponse:
+    plan = svc.ensure_plan(db)
+    payload = svc.build_export_dict(plan)
+    return JSONResponse(
+        content=payload,
+        headers={"Content-Disposition": 'attachment; filename="network-plan.json"'},
+    )
+
+
+@router.post("/import", response_model=PlanOut)
+def import_plan(
+    body: PlanImport,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> PlanOut:
+    plan = svc.import_plan_replace(db, body.model_dump())
+    return svc.plan_to_out(db, plan)
+
+
+@router.get("/candidates", response_model=list[PlanCandidate])
+def get_candidates(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[PlanCandidate]:
+    devices = svc.list_candidates(db)
+    return [
+        PlanCandidate(
+            id=d.id,
+            mac=d.mac,
+            ip=d.ip,
+            name=d.name,
+            hostname=d.hostname,
+            status=d.status,
+        )
+        for d in devices
+    ]

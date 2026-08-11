@@ -252,3 +252,190 @@ def plan_to_out(db: Session, plan: NetworkPlan) -> PlanOut:
         updated_at=plan.updated_at,
         slots=slots_out,
     )
+
+
+EXPORT_FORMAT = "netscantools.network_plan"
+EXPORT_VERSION = 1
+
+
+def build_export_dict(plan: NetworkPlan) -> dict:
+    """Build export payload without live enrichment fields."""
+    slots = sorted(plan.slots, key=lambda s: (s.sort_order, s.id))
+    return {
+        "format": EXPORT_FORMAT,
+        "version": EXPORT_VERSION,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "plan": {
+            "name": plan.name,
+            "cidr": plan.cidr,
+            "notes": plan.notes,
+        },
+        "slots": [
+            {
+                "sort_order": slot.sort_order,
+                "planned_ip": slot.planned_ip,
+                "hostname_hint": slot.hostname_hint,
+                "role_label": slot.role_label,
+                "device_mac": slot.device_mac,
+                "notes": slot.notes,
+                "ports": [
+                    {
+                        "port": p.port,
+                        "label": p.label,
+                        "sort_order": p.sort_order,
+                    }
+                    for p in sorted(slot.ports, key=lambda x: (x.sort_order, x.id))
+                ],
+            }
+            for slot in slots
+        ],
+    }
+
+
+def import_plan_replace(db: Session, data: dict) -> NetworkPlan:
+    """Replace entire plan contents from an export-shaped dict."""
+    if data.get("format") != EXPORT_FORMAT or data.get("version") != EXPORT_VERSION:
+        raise HTTPException(status_code=400, detail="Unsupported plan format")
+
+    plan_meta = data.get("plan") or {}
+    if not isinstance(plan_meta, dict):
+        raise HTTPException(status_code=400, detail="Invalid plan metadata")
+
+    slots_data = data.get("slots") or []
+    if not isinstance(slots_data, list):
+        raise HTTPException(status_code=400, detail="Invalid slots list")
+
+    # Pre-validate MACs and ports before mutating
+    normalized_slots: list[dict] = []
+    for i, raw in enumerate(slots_data):
+        if not isinstance(raw, dict):
+            raise HTTPException(status_code=400, detail=f"Invalid slot at index {i}")
+        try:
+            mac = normalize_mac(raw.get("device_mac"))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        ports_raw = raw.get("ports") or []
+        if not isinstance(ports_raw, list):
+            raise HTTPException(status_code=400, detail=f"Invalid ports on slot {i}")
+
+        ports_out: list[dict] = []
+        seen_ports: set[int] = set()
+        for j, p in enumerate(ports_raw):
+            if not isinstance(p, dict):
+                raise HTTPException(status_code=400, detail=f"Invalid port at slot {i} index {j}")
+            try:
+                port_num = int(p.get("port"))
+            except (TypeError, ValueError) as exc:
+                raise HTTPException(status_code=400, detail=f"Invalid port number at slot {i}") from exc
+            if port_num < 1 or port_num > 65535:
+                raise HTTPException(status_code=400, detail=f"Port out of range at slot {i}")
+            if port_num in seen_ports:
+                raise HTTPException(status_code=400, detail=f"Duplicate port {port_num} on slot {i}")
+            seen_ports.add(port_num)
+            ports_out.append(
+                {
+                    "port": port_num,
+                    "label": p.get("label") or "",
+                    "sort_order": int(p.get("sort_order", j)),
+                }
+            )
+
+        normalized_slots.append(
+            {
+                "sort_order": int(raw.get("sort_order", i)),
+                "planned_ip": raw.get("planned_ip") or None,
+                "hostname_hint": raw.get("hostname_hint"),
+                "role_label": raw.get("role_label"),
+                "device_mac": mac,
+                "notes": raw.get("notes"),
+                "ports": ports_out,
+            }
+        )
+
+    plan = ensure_plan(db)
+    new_cidr = plan_meta.get("cidr")
+    if new_cidr is not None and new_cidr == "":
+        new_cidr = None
+
+    # Validate planned IPs against imported cidr
+    for s in normalized_slots:
+        if s["planned_ip"] and new_cidr and not ip_in_cidr(s["planned_ip"], new_cidr):
+            raise HTTPException(status_code=400, detail="planned_ip outside plan.cidr")
+
+    # Uniqueness of planned_ip / device_mac within import
+    seen_ips: set[str] = set()
+    seen_macs: set[str] = set()
+    for s in normalized_slots:
+        if s["planned_ip"]:
+            if s["planned_ip"] in seen_ips:
+                raise HTTPException(status_code=400, detail="Duplicate planned_ip in import")
+            seen_ips.add(s["planned_ip"])
+        if s["device_mac"]:
+            if s["device_mac"] in seen_macs:
+                raise HTTPException(status_code=400, detail="Duplicate device_mac in import")
+            seen_macs.add(s["device_mac"])
+
+    for slot in list(plan.slots):
+        db.delete(slot)
+    db.flush()
+
+    plan.name = plan_meta.get("name") or "Home LAN"
+    plan.cidr = new_cidr
+    plan.notes = plan_meta.get("notes")
+    touch_plan(plan)
+
+    ordered = sorted(
+        enumerate(normalized_slots),
+        key=lambda pair: (pair[1]["sort_order"], pair[0]),
+    )
+    for order, (_, s) in enumerate(ordered):
+        slot = PlanSlot(
+            plan_id=plan.id,
+            sort_order=order,
+            planned_ip=s["planned_ip"],
+            hostname_hint=s["hostname_hint"],
+            role_label=s["role_label"],
+            device_mac=s["device_mac"],
+            notes=s["notes"],
+        )
+        db.add(slot)
+        db.flush()
+        for p_order, p in enumerate(sorted(s["ports"], key=lambda x: (x["sort_order"], x["port"]))):
+            db.add(
+                PlanPort(
+                    slot_id=slot.id,
+                    port=p["port"],
+                    label=p["label"],
+                    sort_order=p_order,
+                )
+            )
+
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+def list_candidates(db: Session) -> list[Device]:
+    """Devices whose normalized MAC is not bound to any slot in the plan."""
+    plan = ensure_plan(db)
+    bound: set[str] = set()
+    for slot in plan.slots:
+        if not slot.device_mac:
+            continue
+        try:
+            key = normalize_mac(slot.device_mac)
+        except ValueError:
+            key = slot.device_mac.upper() if slot.device_mac else None
+        if key:
+            bound.add(key)
+
+    candidates: list[Device] = []
+    for device in db.query(Device).order_by(Device.id).all():
+        try:
+            mac_key = normalize_mac(device.mac)
+        except ValueError:
+            continue
+        if mac_key and mac_key not in bound:
+            candidates.append(device)
+    return candidates

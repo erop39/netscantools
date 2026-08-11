@@ -103,5 +103,16 @@ class PlanImport(BaseModel):
     format: str
     version: int
     exported_at: str | None = None
-    plan: PlanImportMeta
+    plan: PlanImportMeta = PlanImportMeta()
     slots: list[PlanImportSlot] = []
+
+
+class PlanCandidate(BaseModel):
+    id: int
+    mac: str
+    ip: str | None
+    name: str | None
+    hostname: str | None
+    status: str
+
+    model_config = {"from_attributes": True}
