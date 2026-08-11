@@ -3,6 +3,52 @@ from datetime import datetime
 from pydantic import BaseModel, field_validator
 
 
+# Allowed icon keys (Semantic UI–inspired names for network gear)
+DEVICE_ICON_KEYS = frozenset(
+    {
+        "desktop",
+        "laptop",
+        "tablet",
+        "mobile",
+        "server",
+        "database",
+        "hdd",
+        "wifi",
+        "broadcast",
+        "sitemap",
+        "cloud",
+        "camera",
+        "video",
+        "print",
+        "tv",
+        "gamepad",
+        "headphones",
+        "microchip",
+        "plug",
+        "lightbulb",
+        "home",
+        "shield",
+        "key",
+        "cogs",
+        "globe",
+        "ethernet",
+        "router",
+        "phone",
+        "fax",
+        "usb",
+        "bluetooth",
+        "satellite",
+        "power",
+        "thermometer",
+        "bell",
+        "folder",
+        "box",
+        "car",
+        "question",
+    }
+)
+
+
 class DeviceOut(BaseModel):
     id: int
     mac: str
@@ -11,6 +57,7 @@ class DeviceOut(BaseModel):
     hostname: str | None
     name: str | None = None
     type: str | None
+    icon: str | None = None
     status: str
     last_seen: datetime | None
     web_ui_local: str | None
@@ -24,6 +71,7 @@ class DeviceOut(BaseModel):
 
 class DeviceUpdate(BaseModel):
     type: str | None = None
+    icon: str | None = None
     name: str | None = None
     notes: str | None = None
     web_ui_local: str | None = None
@@ -36,6 +84,18 @@ class DeviceUpdate(BaseModel):
             return None
         cleaned = v.strip()
         return cleaned or None
+
+    @field_validator("icon")
+    @classmethod
+    def validate_icon(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        key = v.strip().lower()
+        if not key:
+            return None
+        if key not in DEVICE_ICON_KEYS:
+            raise ValueError(f"Unknown icon: {key}")
+        return key
 
 
 class PingOut(BaseModel):

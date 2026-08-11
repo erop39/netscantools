@@ -12,6 +12,7 @@ import {
   StatusBadge,
 } from "../components/ui";
 import { deviceLabel } from "../lib/deviceLabel";
+import { DeviceIcon } from "../lib/deviceIcons";
 import { downloadHtmlReport, printPdfReport } from "../lib/exportReport";
 import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
 import type {
@@ -289,7 +290,8 @@ export function Devices() {
             <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-white/50">
               <tr>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Device</th>
+                <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">IP</th>
                 <th className="px-4 py-3 font-medium">MAC</th>
                 <th className="px-4 py-3 font-medium">DNS host</th>
@@ -343,14 +345,24 @@ export function Devices() {
                           </div>
                         </div>
                       ) : (
-                        <div>
-                          <div className="font-medium text-white/90">{deviceLabel(d)}</div>
-                          {d.name && d.hostname && (
-                            <div className="text-[11px] text-white/40">{d.hostname}</div>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <div className="device-avatar">
+                            <DeviceIcon name={d.icon} size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-white/90">
+                              {deviceLabel(d)}
+                            </div>
+                            {d.name && d.hostname && (
+                              <div className="truncate text-[11px] text-white/40">
+                                {d.hostname}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </td>
+                    <td className="px-4 py-3 text-white/70">{d.type ?? "—"}</td>
                     <td className="px-4 py-3 font-mono text-white/90">{d.ip ?? "—"}</td>
                     <td className="px-4 py-3 font-mono text-white/70">{d.mac}</td>
                     <td className="px-4 py-3 text-white/70">{d.hostname ?? "—"}</td>

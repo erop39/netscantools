@@ -11,6 +11,7 @@ export interface Device {
   hostname: string | null;
   name: string | null;
   type: string | null;
+  icon: string | null;
   status: string;
   last_seen: string | null;
   web_ui_local: string | null;
@@ -22,6 +23,7 @@ export interface Device {
 
 export interface DeviceUpdate {
   type?: string | null;
+  icon?: string | null;
   name?: string | null;
   notes?: string | null;
   web_ui_local?: string | null;

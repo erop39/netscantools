@@ -12,6 +12,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.4.9] — 2026-08-11
+
+### Added
+
+- Device type icons (Semantic UI–inspired set): picker on device detail, type presets, avatar in list
+
 ## [0.4.8] — 2026-08-11
 
 ### Changed

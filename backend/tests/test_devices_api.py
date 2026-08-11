@@ -103,6 +103,22 @@ def test_rename_device(client, db_session):
     assert r.json()["hostname"] == "auto.local"
 
 
+def test_set_device_icon(client, db_session):
+    apply_scan_results(
+        db_session,
+        [HostResult(mac="aa:bb:cc:dd:ee:44", ip="192.168.1.44", hostname=None, vendor=None)],
+    )
+    _login(client)
+    devices = client.get("/api/devices").json()
+    dev_id = next(d["id"] for d in devices if d["mac"] == "aa:bb:cc:dd:ee:44")
+    r = client.patch(f"/api/devices/{dev_id}", json={"type": "camera", "icon": "camera"})
+    assert r.status_code == 200
+    assert r.json()["type"] == "camera"
+    assert r.json()["icon"] == "camera"
+    bad = client.patch(f"/api/devices/{dev_id}", json={"icon": "not-a-real-icon"})
+    assert bad.status_code == 422
+
+
 def test_resolve_all_mocked(client, db_session, monkeypatch):
     apply_scan_results(
         db_session,

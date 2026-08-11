@@ -43,3 +43,5 @@ def ensure_schema() -> None:
         col_names = {row[1] for row in rows}
         if "name" not in col_names:
             conn.execute(text("ALTER TABLE devices ADD COLUMN name VARCHAR(255)"))
+        if "icon" not in col_names:
+            conn.execute(text("ALTER TABLE devices ADD COLUMN icon VARCHAR(64)"))

@@ -14,7 +14,13 @@ import {
   PageHeader,
   StatusBadge,
 } from "../components/ui";
+import { IconPicker } from "../components/IconPicker";
 import { deviceLabel } from "../lib/deviceLabel";
+import {
+  DeviceIcon,
+  TYPE_PRESETS,
+  type DeviceIconKey,
+} from "../lib/deviceIcons";
 import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
 import type { Device, PingResult, ResolveResult } from "../types";
 
@@ -34,6 +40,7 @@ export function DeviceDetail() {
 
   const [name, setName] = useState("");
   const [type, setType] = useState("");
+  const [icon, setIcon] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [webUiLocal, setWebUiLocal] = useState("");
   const [webUiExternal, setWebUiExternal] = useState("");
@@ -54,6 +61,7 @@ export function DeviceDetail() {
         setDevice(d);
         setName(d.name ?? "");
         setType(d.type ?? "");
+        setIcon(d.icon ?? null);
         setNotes(d.notes ?? "");
         setWebUiLocal(d.web_ui_local ?? "");
         setWebUiExternal(d.web_ui_external ?? "");
@@ -88,6 +96,7 @@ export function DeviceDetail() {
         body: JSON.stringify({
           name: name.trim() || null,
           type: type.trim() || null,
+          icon: icon || null,
           notes: notes.trim() || null,
           web_ui_local: webUiLocal.trim() || null,
           web_ui_external: webUiExternal.trim() || null,
@@ -95,6 +104,8 @@ export function DeviceDetail() {
       });
       setDevice(updated);
       setName(updated.name ?? "");
+      setType(updated.type ?? "");
+      setIcon(updated.icon ?? null);
       setSuccess("Device updated");
     } catch (err) {
       setError(
@@ -176,7 +187,7 @@ export function DeviceDetail() {
         title={device ? deviceLabel(device) : "Device detail"}
         description={device ? device.mac : "Edit inventory fields"}
         actions={
-          <Link to="/devices" className={btnSecondaryClassName + " h-[40px]"}>
+          <Link to="/devices" className={`${btnSecondaryClassName} h-[40px]`}>
             ← Back to devices
           </Link>
         }
@@ -193,6 +204,17 @@ export function DeviceDetail() {
       {!loading && device && (
         <div className="grid gap-6 lg:grid-cols-3">
           <GlassCard className="lg:col-span-1">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="device-avatar !h-12 !w-12 !rounded-2xl">
+                <DeviceIcon name={device.icon} size={24} />
+              </div>
+              <div className="min-w-0">
+                <div className="truncate font-semibold text-white/95">{deviceLabel(device)}</div>
+                <div className="text-xs text-white/45">
+                  {device.type || "No type"} · {device.icon || "no icon"}
+                </div>
+              </div>
+            </div>
             <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-white/50">
               Discovery
             </h2>
@@ -322,16 +344,37 @@ export function DeviceDetail() {
                 </span>
               </label>
 
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Type
+              <div className="flex flex-col gap-2">
+                <span className="text-sm text-white/80">Type</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {TYPE_PRESETS.map((p) => (
+                    <button
+                      key={p.type}
+                      type="button"
+                      className={`type-chip ${type === p.type ? "is-selected" : ""}`}
+                      onClick={() => {
+                        setType(p.type);
+                        setIcon(p.icon);
+                      }}
+                    >
+                      <DeviceIcon name={p.icon} size={14} />
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="text"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  placeholder="router, camera, NAS, IoT…"
+                  placeholder="Or type custom: router, camera, NAS…"
                   className={fieldClassName}
                 />
-              </label>
+              </div>
+
+              <IconPicker
+                value={icon}
+                onChange={(key: DeviceIconKey | null) => setIcon(key)}
+              />
 
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
                 Web UI (LAN)

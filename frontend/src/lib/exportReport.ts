@@ -45,7 +45,7 @@ export function buildInventoryHtml(devices: Device[]): string {
         <td class="mono">${esc(d.ip) || "—"}</td>
         <td class="mono">${esc(d.mac)}</td>
         <td>${esc(d.vendor) || "—"}</td>
-        <td>${esc(d.type) || "—"}</td>
+        <td>${esc(d.type) || "—"}${d.icon ? ` <span class="sub">(${esc(d.icon)})</span>` : ""}</td>
         <td class="links">
           ${linkHtml("LAN", lan)}
           ${d.web_ui_external ? " · " + linkHtml("Ext", d.web_ui_external) : ""}
