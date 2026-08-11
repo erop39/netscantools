@@ -11,6 +11,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 - (none for MVP)
 
+## [0.3.0] — 2026-08-11
+
+### Added
+
+- Windows network scanner (ping sweep + arp -a)
+- Scans API, history UI, manual trigger
+- APScheduler interval scans
+
 ## [0.2.0] — 2026-08-11
 
 ### Added
