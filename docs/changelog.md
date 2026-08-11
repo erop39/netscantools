@@ -12,6 +12,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.5.1] — 2026-08-11
+
+### Fixed
+
+- Sidebar collapse: icon-only rail; expand/collapse is an edge control (not a nav item)
+- Main content left-aligned next to sidebar (no longer floating mid-canvas)
+- Stronger glass cards + high-contrast inputs over custom backgrounds
+- Settings: password CTA not clipped; show/hide passwords; denser account form
+
 ## [0.5.0] — 2026-08-11
 
 ### Added

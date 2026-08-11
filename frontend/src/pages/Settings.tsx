@@ -78,6 +78,7 @@ export function Settings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
   const [pwdSaving, setPwdSaving] = useState(false);
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [pwdSuccess, setPwdSuccess] = useState<string | null>(null);
@@ -283,67 +284,75 @@ export function Settings() {
     : PRESETS.find((p) => p.id === "custom")!.previewStyle;
 
   return (
-    <div>
+    <div className="settings-stack">
       <PageHeader
         title="Settings"
-        description="Appearance and advanced defaults"
+        description="Account, appearance and scan defaults"
       />
 
       {loading && <LoadingState label="Loading settings…" />}
-      {error && (
-        <div className="mb-4">
-          <ErrorBanner message={error} />
-        </div>
-      )}
+      {error && <ErrorBanner message={error} />}
       {success && (
-        <div
-          className="mb-4 rounded-[12px] border border-emerald-400/30 bg-emerald-500/15 px-4 py-3 text-sm text-emerald-100"
-          role="status"
-        >
+        <div className="banner banner-success" role="status">
           {success}
         </div>
       )}
 
       {!loading && (
-        <div className="flex max-w-2xl flex-col gap-6">
-          <GlassCard>
+        <>
+          <GlassCard className="!p-6">
             <h2 className="mb-1 text-sm font-semibold text-white/95">Account</h2>
-            <p className="mb-4 text-xs text-white/50">Change your login password</p>
-            <form onSubmit={onChangePassword} className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            <p className="mb-4 text-xs text-white/55">Change your login password</p>
+            <form onSubmit={onChangePassword} className="flex flex-col gap-3.5">
+              <label className="flex flex-col gap-1.5 text-sm text-white/85">
                 Current password
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  className={fieldClassName}
-                />
+                <div className="password-field-wrap">
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                    className={fieldClassName}
+                  />
+                </div>
               </label>
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              <label className="flex flex-col gap-1.5 text-sm text-white/85">
                 New password
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className={fieldClassName}
-                />
+                <div className="password-field-wrap">
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className={fieldClassName}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPwd((v) => !v)}
+                    title={showPwd ? "Hide passwords" : "Show passwords"}
+                    aria-label={showPwd ? "Hide passwords" : "Show passwords"}
+                  >
+                    {showPwd ? "Hide" : "Show"}
+                  </button>
+                </div>
               </label>
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              <label className="flex flex-col gap-1.5 text-sm text-white/85">
                 Confirm new password
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className={fieldClassName}
-                />
+                <div className="password-field-wrap">
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className={fieldClassName}
+                  />
+                </div>
               </label>
               {pwdError && (
                 <div className="banner banner-error" role="alert">
@@ -355,19 +364,21 @@ export function Settings() {
                   {pwdSuccess}
                 </div>
               )}
-              <button
-                type="submit"
-                disabled={pwdSaving}
-                className={`${btnPrimaryClassName} mt-1 w-fit`}
-              >
-                {pwdSaving ? "Updating…" : "Change password"}
-              </button>
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  disabled={pwdSaving}
+                  className={`${btnPrimaryClassName} min-w-[160px]`}
+                >
+                  {pwdSaving ? "Updating…" : "Change password"}
+                </button>
+              </div>
             </form>
           </GlassCard>
 
-          <form onSubmit={onSubmit} className="flex flex-col gap-6">
-          <GlassCard>
-            <h2 className="mb-1 text-sm font-medium text-white/90">Appearance</h2>
+          <form onSubmit={onSubmit} className="flex flex-col gap-5">
+          <GlassCard className="!p-6">
+            <h2 className="mb-1 text-sm font-semibold text-white/95">Appearance</h2>
             <p className="mb-4 text-xs text-white/50">
               Background behind the glass UI. Changes apply immediately; click Save to persist with
               scan settings.
@@ -424,10 +435,10 @@ export function Settings() {
             </div>
           </GlassCard>
 
-          <GlassCard>
+          <GlassCard className="!p-6">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
               <div>
-                <h2 className="text-sm font-medium text-white/90">Network scan defaults</h2>
+                <h2 className="text-sm font-semibold text-white/95">Network scan defaults</h2>
                 <p className="mt-1 text-xs text-white/50">
                   Primary controls live on the{" "}
                   <Link to="/scans" className="text-sky-300/90 hover:text-sky-200">
@@ -480,11 +491,13 @@ export function Settings() {
             </div>
           </GlassCard>
 
-          <button type="submit" disabled={saving} className={`${btnPrimaryClassName} w-fit`}>
-            {saving ? "Saving…" : "Save settings"}
-          </button>
+          <div className="pb-2">
+            <button type="submit" disabled={saving} className={`${btnPrimaryClassName} min-w-[140px]`}>
+              {saving ? "Saving…" : "Save settings"}
+            </button>
+          </div>
           </form>
-        </div>
+        </>
       )}
     </div>
   );

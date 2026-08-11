@@ -69,22 +69,33 @@ export function Sidebar({ collapsed, onToggle }: Props) {
       className={`sidebar-shell glass-panel ${collapsed ? "is-collapsed" : ""}`}
       data-collapsed={collapsed ? "true" : "false"}
     >
-      <header className="sidebar-header">
-        <div className="login-logo sidebar-logo">q</div>
-        <div className="sidebar-brand">
-          <div className="sidebar-brand-title">qube.li</div>
-          <div className="sidebar-brand-sub">NetInventory</div>
+      {/* Edge toggle — not a nav item */}
+      <button
+        type="button"
+        className="sidebar-edge-toggle"
+        onClick={onToggle}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!collapsed}
+      >
+        {collapsed ? <IconChevronRight size={14} /> : <IconChevronLeft size={14} />}
+      </button>
+
+      {!collapsed && (
+        <header className="sidebar-header">
+          <div className="login-logo sidebar-logo">q</div>
+          <div className="sidebar-brand">
+            <div className="sidebar-brand-title">qube.li</div>
+            <div className="sidebar-brand-sub">NetInventory</div>
+          </div>
+        </header>
+      )}
+
+      {collapsed && (
+        <div className="sidebar-collapsed-logo" title="qube.li">
+          <div className="login-logo sidebar-logo">q</div>
         </div>
-        <button
-          type="button"
-          className="sidebar-toggle"
-          onClick={onToggle}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}
-        </button>
-      </header>
+      )}
 
       <div className="sidebar-divider" />
 

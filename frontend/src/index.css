@@ -105,12 +105,12 @@ html[data-bg="gradient"] .app-scene::after {
 
 .app-shell {
   --sidebar-expanded: 268px;
-  --sidebar-collapsed: 76px;
+  --sidebar-collapsed: 72px;
   --sidebar-w: var(--sidebar-expanded);
-  --sidebar-gap: 20px;
-  --content-pad-x: 28px;
-  --content-pad-y: 20px;
-  --content-left: calc(var(--sidebar-gap) + var(--sidebar-w) + 20px);
+  --sidebar-gap: 16px;
+  --content-pad-x: 24px;
+  --content-pad-y: 16px;
+  --content-left: calc(var(--sidebar-gap) + var(--sidebar-w) + 16px);
   min-height: 100vh;
 }
 
@@ -122,13 +122,62 @@ html[data-bg="gradient"] .app-scene::after {
   position: fixed;
   top: var(--sidebar-gap);
   left: var(--sidebar-gap);
-  bottom: 28px;
+  bottom: 20px;
   z-index: 30;
   width: var(--sidebar-w);
   display: flex;
   flex-direction: column;
-  padding: 12px;
+  padding: 12px 10px;
   transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  /* allow edge toggle to stick out */
+  overflow: visible;
+}
+
+.sidebar-shell.glass-panel {
+  overflow: visible;
+}
+
+.sidebar-shell.glass-panel::before {
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* Floating chevron on the rail edge — never looks like a nav icon */
+.sidebar-edge-toggle {
+  position: absolute;
+  top: 50%;
+  right: -13px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 40px;
+  margin-top: -20px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  background: linear-gradient(180deg, rgb(30 50 80 / 92%), rgb(12 24 44 / 95%));
+  color: rgb(200 220 240 / 90%);
+  cursor: pointer;
+  box-shadow:
+    0 6px 18px rgb(0 0 0 / 35%),
+    0 0 0 1px rgb(56 189 248 / 12%),
+    inset 0 1px 0 rgb(255 255 255 / 12%);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.sidebar-edge-toggle:hover {
+  color: #fff;
+  background: linear-gradient(180deg, rgb(40 80 130 / 95%), rgb(14 40 70 / 98%));
+  box-shadow:
+    0 8px 22px rgb(0 0 0 / 40%),
+    0 0 16px rgb(56 189 248 / 25%);
+  transform: scale(1.04);
 }
 
 .sidebar-header {
@@ -137,8 +186,8 @@ html[data-bg="gradient"] .app-scene::after {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 4px 4px 10px;
+  min-height: 44px;
+  padding: 2px 4px 8px;
 }
 
 .sidebar-logo {
@@ -151,15 +200,18 @@ html[data-bg="gradient"] .app-scene::after {
   box-shadow: 0 6px 18px rgb(14 165 233 / 35%) !important;
 }
 
+.sidebar-collapsed-logo {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
 .sidebar-brand {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  opacity: 1;
-  transition:
-    opacity 0.18s ease,
-    width 0.22s ease,
-    max-width 0.22s ease;
 }
 
 .sidebar-brand-title {
@@ -178,40 +230,16 @@ html[data-bg="gradient"] .app-scene::after {
   white-space: nowrap;
 }
 
-.sidebar-toggle {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  border: 1px solid rgb(255 255 255 / 12%);
-  background: rgb(255 255 255 / 6%);
-  color: rgb(220 235 250 / 80%);
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.sidebar-toggle:hover {
-  color: #fff;
-  background: rgb(56 189 248 / 16%);
-  border-color: rgb(125 211 252 / 35%);
-}
-
 .sidebar-divider {
   position: relative;
   z-index: 1;
   height: 1px;
-  margin: 2px 6px 10px;
+  margin: 2px 4px 10px;
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 12%), transparent);
 }
 
 .sidebar-divider-bottom {
-  margin: 8px 6px 6px;
+  margin: 8px 4px 6px;
 }
 
 .sidebar-nav {
@@ -229,44 +257,69 @@ html[data-bg="gradient"] .app-scene::after {
   position: relative;
   z-index: 1;
   margin-top: auto;
+  color: rgb(248 180 180 / 75%) !important;
 }
 
+.sidebar-logout:hover {
+  color: #fecaca !important;
+  background: rgb(248 113 113 / 10%) !important;
+}
+
+/* Main column — top-aligned next to sidebar (not centered in leftover space) */
 .app-main {
+  box-sizing: border-box;
   min-height: 100vh;
-  padding: var(--content-pad-y) var(--content-pad-x) 32px var(--content-left);
+  padding: var(--content-pad-y) var(--content-pad-x) 48px var(--content-left);
   transition: padding-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .app-main-inner {
   max-width: 72rem;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0; /* left-align under content area, not page-center */
 }
 
-/* Collapsed: icons only */
-.sidebar-shell.is-collapsed .sidebar-brand {
-  max-width: 0;
-  opacity: 0;
+/* Soft scrim so busy custom backgrounds don't wash out content */
+.app-main::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--content-left);
+  z-index: 0;
   pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgb(2 8 18 / 42%) 0%,
+    rgb(2 8 18 / 22%) 45%,
+    rgb(2 8 18 / 10%) 100%
+  );
+  transition: left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.sidebar-shell.is-collapsed .sidebar-header {
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-bottom: 8px;
+.app-main-inner {
+  position: relative;
+  z-index: 1;
 }
 
-.sidebar-shell.is-collapsed .sidebar-logo {
-  order: 1;
-}
-
-.sidebar-shell.is-collapsed .sidebar-toggle {
-  order: 2;
+/* Collapsed: pure icon rail */
+.sidebar-shell.is-collapsed {
+  padding: 10px 8px;
+  align-items: center;
 }
 
 .sidebar-shell.is-collapsed .nav-label,
 .sidebar-shell.is-collapsed .nav-badge {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .sidebar-shell.is-collapsed .nav-item {
@@ -274,7 +327,7 @@ html[data-bg="gradient"] .app-scene::after {
   padding: 0;
   width: 48px;
   height: 48px;
-  margin: 0 auto;
+  margin: 0;
   gap: 0;
 }
 
@@ -284,12 +337,17 @@ html[data-bg="gradient"] .app-scene::after {
 
 .sidebar-shell.is-collapsed .nav-item.is-active {
   box-shadow:
-    inset 0 0 0 1px rgb(125 211 252 / 35%),
-    0 0 16px rgb(14 165 233 / 18%);
+    inset 0 0 0 1px rgb(125 211 252 / 40%),
+    0 0 16px rgb(14 165 233 / 20%);
 }
 
 .sidebar-shell.is-collapsed .nav-icon {
   margin: 0;
+}
+
+.sidebar-shell.is-collapsed .sidebar-nav {
+  align-items: center;
+  width: 100%;
 }
 
 /* ── Glass surfaces ────────────────────────────────────── */
@@ -330,34 +388,36 @@ html[data-bg="gradient"] .app-scene::after {
 
 .glass-card {
   position: relative;
+  /* denser glass — stays readable on loud custom wallpapers */
   background: linear-gradient(
     160deg,
-    rgb(255 255 255 / 8%) 0%,
-    rgb(10 22 44 / 52%) 55%,
-    rgb(8 18 38 / 58%) 100%
+    rgb(18 32 56 / 88%) 0%,
+    rgb(8 18 36 / 92%) 55%,
+    rgb(6 14 28 / 94%) 100%
   );
-  border: 1px solid rgb(255 255 255 / 12%);
+  border: 1px solid rgb(255 255 255 / 16%);
   border-radius: var(--radius-lg);
-  -webkit-backdrop-filter: blur(28px) saturate(150%);
-  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(36px) saturate(160%);
+  backdrop-filter: blur(36px) saturate(160%);
   box-shadow:
-    0 10px 32px rgb(0 0 0 / 25%),
+    0 12px 36px rgb(0 0 0 / 40%),
+    0 0 0 1px rgb(0 0 0 / 25%),
     0 1px 0 rgb(255 255 255 / 12%) inset;
+  overflow: visible;
   transition:
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.25s ease,
     border-color 0.25s ease;
 }
 
 .glass-card:hover {
-  border-color: rgb(255 255 255 / 18%);
+  border-color: rgb(255 255 255 / 20%);
   box-shadow:
-    0 14px 40px rgb(0 0 0 / 30%),
-    0 0 0 1px rgb(94 184 255 / 8%),
+    0 16px 42px rgb(0 0 0 / 42%),
+    0 0 0 1px rgb(94 184 255 / 10%),
     0 1px 0 rgb(255 255 255 / 14%) inset;
 }
 
-/* ── Inputs (uiverse soft glass field) ─────────────────── */
+/* ── Inputs (high contrast on busy backgrounds) ────────── */
 
 .glass-input {
   appearance: none;
@@ -366,13 +426,13 @@ html[data-bg="gradient"] .app-scene::after {
   padding: 0 14px;
   font-family: inherit;
   font-size: 13.5px;
-  color: var(--text);
-  background: rgb(0 0 0 / 28%);
-  border: 1px solid rgb(255 255 255 / 12%);
+  color: rgb(248 250 252 / 96%);
+  background: rgb(2 8 20 / 78%);
+  border: 1px solid rgb(255 255 255 / 18%);
   border-radius: var(--radius-md);
   box-shadow:
-    inset 0 2px 6px rgb(0 0 0 / 28%),
-    0 1px 0 rgb(255 255 255 / 5%);
+    inset 0 2px 8px rgb(0 0 0 / 45%),
+    0 1px 0 rgb(255 255 255 / 6%);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -380,22 +440,22 @@ html[data-bg="gradient"] .app-scene::after {
 }
 
 .glass-input:hover:not(:disabled):not(:focus) {
-  border-color: rgb(255 255 255 / 20%);
-  background: rgb(0 0 0 / 32%);
+  border-color: rgb(255 255 255 / 28%);
+  background: rgb(4 12 28 / 85%);
 }
 
 .glass-input:focus {
   outline: none;
-  background: rgb(4 12 28 / 55%);
-  border-color: rgb(94 184 255 / 55%);
+  background: rgb(4 14 32 / 90%);
+  border-color: rgb(94 184 255 / 60%);
   box-shadow:
-    inset 0 2px 6px rgb(0 0 0 / 22%),
-    0 0 0 3px rgb(56 189 248 / 18%),
-    0 0 20px rgb(56 189 248 / 12%);
+    inset 0 2px 6px rgb(0 0 0 / 35%),
+    0 0 0 3px rgb(56 189 248 / 22%),
+    0 0 20px rgb(56 189 248 / 14%);
 }
 
 .glass-input::placeholder {
-  color: rgb(160 180 210 / 45%);
+  color: rgb(160 180 210 / 50%);
 }
 
 .glass-input:disabled {
@@ -1015,17 +1075,59 @@ textarea.glass-input {
 /* ── Misc ──────────────────────────────────────────────── */
 
 .page-title {
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: #fff;
-  text-shadow: 0 2px 24px rgb(0 0 0 / 35%);
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 60%),
+    0 2px 24px rgb(0 0 0 / 45%);
 }
 
 .page-desc {
   margin-top: 4px;
   font-size: 13.5px;
-  color: var(--text-muted);
+  color: rgb(220 230 245 / 78%);
+  text-shadow: 0 1px 8px rgb(0 0 0 / 50%);
+}
+
+/* Settings / forms: keep primary CTA fully visible */
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 40rem;
+  padding-bottom: 2rem;
+}
+
+.password-field-wrap {
+  position: relative;
+}
+
+.password-field-wrap .glass-input {
+  padding-right: 44px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgb(180 200 220 / 70%);
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 8%);
 }
 
 .link-accent {
