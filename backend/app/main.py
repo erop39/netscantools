@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.db import Base, engine
+from app.db import Base, SessionLocal, engine
+from app import models  # noqa: F401 — register models
+from app.services.auth import ensure_admin_user, ensure_default_settings
 
 settings = get_settings()
 app = FastAPI(title="NetInventory", version="0.1.0")
@@ -18,6 +20,12 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        ensure_admin_user(db)
+        ensure_default_settings(db)
+    finally:
+        db.close()
 
 
 @app.get("/api/health")
