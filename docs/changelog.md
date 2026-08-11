@@ -12,6 +12,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.4.4] — 2026-08-11
+
+### Added
+
+- Single launcher: `run.py` / `start.bat` — API + UI in one window (no two terminals)
+- Auto port fallback if 8000/5173 are busy; opens browser; Ctrl+C stops both
+
 ## [0.4.3] — 2026-08-11
 
 ### Added

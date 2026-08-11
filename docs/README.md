@@ -56,7 +56,29 @@
 - **Notifications** — новое устройство в сети / устройство пропало / сменился IP у известного MAC.
 - **Account / Settings** — диапазон сети для скана, интервал сканирования, авторизация.
 
-## Установка (черновой план)
+## Установка / запуск
+
+### Один файл (рекомендуется на Windows)
+
+```powershell
+cd netPad
+python run.py
+```
+
+или двойной клик по `start.bat`.
+
+Поднимает backend + frontend в **одном** окне, открывает браузер.  
+Остановка: **Ctrl+C**.
+
+| | |
+|---|---|
+| UI | http://127.0.0.1:5173 |
+| API | http://127.0.0.1:8000 |
+| Логин | `admin` / `admin` |
+
+Нужны: Python 3.12+, Node.js (npm). При первом запуске venv и `npm install` ставятся сами.
+
+### Docker (позже)
 
 ```bash
 git clone <repo>
@@ -64,7 +86,7 @@ cd netinventory
 docker compose up -d
 ```
 
-Backend поднимется на `:8000`, frontend — на `:3000` (порт настраивается в `docker-compose.yml`).
+Backend `:8000`, frontend (dev) `:5173`.
 
 ### Настройка сканирования
 
