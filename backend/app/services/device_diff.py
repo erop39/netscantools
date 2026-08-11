@@ -4,9 +4,10 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.models.device import Device
-from app.models.notification import Notification
+from app.services.device_events import log_event, log_event_and_maybe_notify
 from app.services.nettools import default_web_ui_local
 from app.services.oui import lookup_vendor
+from app.services.scoring import compute_device_score
 
 
 @dataclass
@@ -35,6 +36,7 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
     now = datetime.now(timezone.utc)
     new_count = 0
     seen_macs: set[str] = set()
+    touched: list[Device] = []
 
     for host in found:
         mac = normalize_mac(host.mac)
@@ -56,22 +58,33 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
             )
             db.add(device)
             db.flush()
-            db.add(
-                Notification(
-                    type="new_device",
-                    device_id=device.id,
-                    message=f"New device {mac} at {host.ip}",
-                )
+            log_event_and_maybe_notify(
+                db,
+                device.id,
+                "new_device",
+                f"New device {mac} at {host.ip}",
+                details={"mac": mac, "ip": host.ip},
             )
             new_count += 1
+            touched.append(device)
         else:
+            was_offline = (device.status or "").lower() == "offline"
             if device.ip and device.ip != host.ip:
-                db.add(
-                    Notification(
-                        type="ip_changed",
-                        device_id=device.id,
-                        message=f"{mac} IP changed {device.ip} → {host.ip}",
-                    )
+                old_ip = device.ip
+                log_event_and_maybe_notify(
+                    db,
+                    device.id,
+                    "ip_changed",
+                    f"{mac} IP changed {old_ip} → {host.ip}",
+                    details={"mac": mac, "old_ip": old_ip, "new_ip": host.ip},
+                )
+            if was_offline:
+                # Event only — no notification (came_online maps to None)
+                log_event(
+                    db,
+                    device.id,
+                    "came_online",
+                    details={"mac": mac, "ip": host.ip},
                 )
             device.ip = host.ip
             device.status = "online"
@@ -84,19 +97,25 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
             # Keep a usable open link if user never set one
             if not device.web_ui_local and host.ip:
                 device.web_ui_local = default_web_ui_local(host.ip)
+            touched.append(device)
 
     online_devices = db.query(Device).filter(Device.status == "online").all()
     for device in online_devices:
         if device.mac not in seen_macs:
             device.status = "offline"
             device.updated_at = now
-            db.add(
-                Notification(
-                    type="device_offline",
-                    device_id=device.id,
-                    message=f"Device {device.mac} went offline",
-                )
+            log_event_and_maybe_notify(
+                db,
+                device.id,
+                "went_offline",
+                f"Device {device.mac} went offline",
+                details={"mac": device.mac},
             )
+            touched.append(device)
+
+    for device in touched:
+        score, _ = compute_device_score(device, now=now)
+        device.security_score = score
 
     db.commit()
     return DiffResult(devices_found=len(seen_macs), new_devices=new_count)
