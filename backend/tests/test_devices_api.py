@@ -163,16 +163,20 @@ def test_device_out_has_hygiene_fields(client, db_session):
     assert listed["is_new"] is True
     assert listed.get("score_breakdown") is None
 
-    # Detail: includes score_breakdown list
+    # Detail: includes score_breakdown list; live score matches breakdown deltas
     r = client.get(f"/api/devices/{device_id}")
     assert r.status_code == 200
     body = r.json()
     assert "latency_ms" in body
     assert "security_score" in body
+    assert body["security_score"] is not None
     assert "is_new" in body
     assert body["is_new"] is True
     assert "score_breakdown" in body
     assert isinstance(body["score_breakdown"], list)
+    # Live score must equal 100 + sum(deltas) from breakdown (no drift)
+    deltas = sum(item.get("delta", 0) for item in body["score_breakdown"])
+    assert body["security_score"] == 100 + deltas
 
 
 def test_device_events_endpoint(client, db_session):
@@ -203,6 +207,38 @@ def test_device_events_endpoint(client, db_session):
         assert "type" in ev
         assert "details" in ev
         assert "created_at" in ev
+
+
+def test_device_events_limit(client, db_session):
+    apply_scan_results(
+        db_session,
+        [HostResult(mac="aa:bb:cc:dd:ee:75", ip="192.168.1.75", hostname=None, vendor=None)],
+    )
+    device = db_session.query(Device).filter_by(mac="aa:bb:cc:dd:ee:75").one()
+    for i in range(5):
+        db_session.add(
+            DeviceEvent(
+                device_id=device.id,
+                type="port_opened",
+                details={"port": 8000 + i, "mac": device.mac},
+            )
+        )
+    db_session.commit()
+
+    _login(client)
+    r = client.get(f"/api/devices/{device.id}/events", params={"limit": 2})
+    assert r.status_code == 200
+    assert len(r.json()) == 2
+
+    r_default = client.get(f"/api/devices/{device.id}/events")
+    assert r_default.status_code == 200
+    # default limit 50 covers all seeded events
+    assert len(r_default.json()) >= 5
+
+    bad = client.get(f"/api/devices/{device.id}/events", params={"limit": 0})
+    assert bad.status_code == 422
+    bad_hi = client.get(f"/api/devices/{device.id}/events", params={"limit": 501})
+    assert bad_hi.status_code == 422
 
 
 def test_ping_persists_latency(client, db_session, monkeypatch):

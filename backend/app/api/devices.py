@@ -35,7 +35,13 @@ def _as_utc(dt: datetime | None) -> datetime | None:
 
 
 def to_device_out(device: Device, *, with_breakdown: bool = False) -> DeviceOut:
-    """Map Device ORM → DeviceOut; always set is_new; optional score_breakdown."""
+    """Map Device ORM → DeviceOut; always set is_new; optional score_breakdown.
+
+    When with_breakdown=True, recompute live score + breakdown via
+    compute_device_score so security_score never drifts from score_breakdown.
+    Also writes the live score back onto the ORM instance (caller may commit
+    to refresh the list-cache, e.g. on detail GET).
+    """
     now = datetime.now(timezone.utc)
     first_seen = _as_utc(device.first_seen)
     is_new = (
@@ -43,15 +49,14 @@ def to_device_out(device: Device, *, with_breakdown: bool = False) -> DeviceOut:
         and first_seen >= now - timedelta(hours=NEW_DEVICE_HOURS)
     )
     breakdown: list[dict] | None = None
+    updates: dict = {"is_new": is_new, "score_breakdown": breakdown}
     if with_breakdown:
-        _, breakdown = compute_device_score(device, now=now)
+        score, breakdown = compute_device_score(device, now=now)
+        device.security_score = score  # in-memory cache write-back
+        updates["security_score"] = score
+        updates["score_breakdown"] = breakdown
     base = DeviceOut.model_validate(device)
-    return base.model_copy(
-        update={
-            "is_new": is_new,
-            "score_breakdown": breakdown,
-        }
-    )
+    return base.model_copy(update=updates)
 
 
 def _get_device_or_404(db: Session, device_id: int) -> Device:
@@ -123,7 +128,10 @@ def get_device(
     _: User = Depends(get_current_user),
 ) -> DeviceOut:
     device = _get_device_or_404(db, device_id)
-    return to_device_out(device, with_breakdown=True)
+    out = to_device_out(device, with_breakdown=True)
+    # Persist recomputed score so subsequent list views stay fresher
+    db.commit()
+    return out
 
 
 @router.patch("/{device_id}", response_model=DeviceOut)
@@ -156,6 +164,7 @@ def delete_device(
 @router.get("/{device_id}/events", response_model=list[DeviceEventOut])
 def list_device_events(
     device_id: int,
+    limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[DeviceEvent]:
@@ -164,6 +173,7 @@ def list_device_events(
         db.query(DeviceEvent)
         .filter(DeviceEvent.device_id == device_id)
         .order_by(DeviceEvent.created_at.desc())
+        .limit(limit)
         .all()
     )
 
