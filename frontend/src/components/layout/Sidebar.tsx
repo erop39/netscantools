@@ -8,6 +8,7 @@ import {
   IconChevronRight,
   IconDevices,
   IconHome,
+  IconHygiene,
   IconLogout,
   IconPlanner,
   IconScans,
@@ -24,6 +25,7 @@ const navItems: {
 }[] = [
   { to: "/", label: "Home", end: true, Icon: IconHome },
   { to: "/devices", label: "Devices", Icon: IconDevices },
+  { to: "/hygiene", label: "Hygiene", Icon: IconHygiene },
   { to: "/planner", label: "Planner", Icon: IconPlanner },
   { to: "/scans", label: "Scans", Icon: IconScans },
   { to: "/notifications", label: "Notifications", Icon: IconBell },

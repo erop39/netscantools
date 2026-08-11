@@ -19,6 +19,42 @@ export interface Device {
   notes: string | null;
   first_seen: string;
   updated_at: string;
+  latency_ms?: number | null;
+  open_ports?: { port: number; service?: string | null; source?: string }[] | null;
+  ports_scanned_at?: string | null;
+  security_score?: number | null;
+  is_new?: boolean;
+  score_breakdown?: { code: string; label: string; delta: number }[] | null;
+}
+
+export interface DeviceEvent {
+  id: number;
+  type: string;
+  details: Record<string, unknown> | null;
+  created_at: string;
+  device_id?: number | null;
+}
+
+export interface HygieneSummary {
+  network_score: number | null;
+  counts: { online: number; offline: number; new_24h: number; risky_devices: number };
+  top_risks: {
+    device_id: number;
+    mac: string;
+    name: string | null;
+    security_score: number | null;
+    ip: string | null;
+  }[];
+  recent_events: DeviceEvent[];
+}
+
+export interface ChecklistItem {
+  id: number;
+  key: string;
+  label: string;
+  checked: boolean;
+  checked_at: string | null;
+  sort_order: number;
 }
 
 export interface DeviceUpdate {
@@ -100,6 +136,7 @@ export interface Settings {
   scan_subnet: string;
   scan_interval_minutes: number;
   scan_ports: string;
+  quick_ports: string;
   ui_background: UiBackground;
   ui_background_url: string | null;
   has_custom_background: boolean;

@@ -49,6 +49,15 @@ export function IconPlanner(props: IconProps) {
   );
 }
 
+export function IconHygiene(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3 5 6.5v5.2c0 4.2 2.8 7.1 7 8.3 4.2-1.2 7-4.1 7-8.3V6.5L12 3z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
 export function IconScans(props: IconProps) {
   return (
     <svg {...base(props)}>
