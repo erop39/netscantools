@@ -2307,7 +2307,7 @@ select.glass-input {
   padding-top: 4px;
 }
 
-/* ── Network Planner ─────────────────────────────────────── */
+/* ── Network Planner (compact density) ───────────────────── */
 
 .planner-page {
   display: flex;
@@ -2315,17 +2315,54 @@ select.glass-input {
   gap: 0;
 }
 
+/* Dense controls inside Planner only */
+.planner-page .glass-input {
+  height: 34px;
+  font-size: 12.5px;
+  padding: 0 10px;
+  border-radius: 9px;
+}
+
+.planner-page .dark-dd--compact .dark-dd-trigger,
+.planner-page .dark-dd-trigger {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  border-radius: 9px;
+}
+
+.planner-btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 11px !important;
+  font-size: 12px !important;
+  border-radius: 9px !important;
+  gap: 5px !important;
+}
+
+.planner-btn--xs {
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 9px !important;
+  font-size: 11px !important;
+}
+
 .planner-header-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.planner-meta {
+  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
 }
 
 .planner-meta-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 14px;
+  gap: 8px 10px;
 }
 
 @media (min-width: 900px) {
@@ -2340,7 +2377,7 @@ select.glass-input {
 .planner-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -2349,11 +2386,11 @@ select.glass-input {
 }
 
 .planner-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgb(180 200 220 / 72%);
+  color: rgb(180 200 220 / 65%);
 }
 
 .planner-meta-footer {
@@ -2361,28 +2398,33 @@ select.glass-input {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
-  padding-top: 12px;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid rgb(255 255 255 / 8%);
 }
 
 .planner-meta-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
 .planner-section-title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: rgb(236 244 255 / 92%);
   margin: 0;
 }
 
 .planner-section-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
-  margin: 4px 0 0;
+  margin: 2px 0 0;
+}
+
+.planner-inventory {
+  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
 }
 
 .planner-inventory-head {
@@ -2390,19 +2432,19 @@ select.glass-input {
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
 .planner-inventory-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .planner-inventory-row > *:first-child {
-  flex: 1 1 220px;
+  flex: 1 1 200px;
   min-width: 0;
 }
 
@@ -2412,29 +2454,30 @@ select.glass-input {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .planner-slot {
-  padding: 14px 16px 16px;
+  padding: 10px 12px 11px !important;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  border-radius: 12px !important;
 }
 
 .planner-slot-top {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 12px;
+  gap: 6px 8px;
 }
 
 .planner-slot-order {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 10px;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 8px;
   background: rgb(0 0 0 / 18%);
   border: 1px solid rgb(255 255 255 / 8%);
 }
@@ -2443,15 +2486,15 @@ select.glass-input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: rgb(186 210 230 / 85%);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   transition:
     background 0.12s ease,
@@ -2469,9 +2512,9 @@ select.glass-input {
 }
 
 .planner-order-num {
-  min-width: 1.5rem;
+  min-width: 1.25rem;
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: rgb(200 220 240 / 80%);
@@ -2481,7 +2524,7 @@ select.glass-input {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -2489,10 +2532,10 @@ select.glass-input {
 .planner-match {
   display: inline-flex;
   align-items: center;
-  height: 24px;
-  padding: 0 10px;
+  height: 20px;
+  padding: 0 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
@@ -2523,13 +2566,13 @@ select.glass-input {
 }
 
 .planner-live {
-  font-size: 12px;
+  font-size: 11px;
   font-family: var(--font-mono);
   color: rgb(186 210 230 / 78%);
 }
 
 .planner-device-link {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: #7dd3fc;
   text-decoration: none;
@@ -2543,7 +2586,7 @@ select.glass-input {
 .planner-slot-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 12px;
+  gap: 6px 8px;
 }
 
 @media (min-width: 960px) {
@@ -2558,25 +2601,25 @@ select.glass-input {
 .planner-slot-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .planner-ports {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 4px;
+  gap: 6px;
+  padding-top: 6px;
   border-top: 1px solid rgb(255 255 255 / 7%);
 }
 
 .planner-ports-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .planner-ports-empty {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -2586,20 +2629,20 @@ select.glass-input {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .planner-port-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 6px 0 10px;
+  gap: 4px;
+  height: 22px;
+  padding: 0 4px 0 8px;
   border-radius: 999px;
   background: rgb(14 165 233 / 12%);
   border: 1px solid rgb(56 189 248 / 22%);
   color: #bae6fd;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .planner-port-num {
@@ -2610,7 +2653,7 @@ select.glass-input {
 
 .planner-port-label {
   color: rgb(186 210 230 / 80%);
-  max-width: 8rem;
+  max-width: 7rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2620,15 +2663,15 @@ select.glass-input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: none;
   border-radius: 999px;
   background: transparent;
   color: rgb(186 210 230 / 70%);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
 }
 
@@ -2645,30 +2688,30 @@ select.glass-input {
 .planner-port-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
 .planner-port-input {
-  width: 5.5rem;
+  width: 4.5rem;
   flex: 0 0 auto;
 }
 
 .planner-port-label-input {
-  flex: 1 1 140px;
-  min-width: 120px;
+  flex: 1 1 120px;
+  min-width: 100px;
 }
 
 .planner-refresh-cands {
   display: block;
   width: 100%;
   margin: 0;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: none;
   border-top: 1px solid rgb(255 255 255 / 8%);
   background: transparent;
   color: #7dd3fc;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   text-align: left;
   cursor: pointer;

@@ -12,6 +12,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.7.1] — 2026-08-11
+
+### Changed
+
+- Planner UI denser (compact cards, smaller buttons/inputs)
+- Planner **Export HTML** — print-friendly visual network map (timeline of hosts, ports, live vs planned)
+
 ## [0.7.0] — 2026-08-11
 
 ### Added
