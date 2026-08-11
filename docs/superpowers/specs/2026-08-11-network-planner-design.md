@@ -48,11 +48,20 @@ After scanning the LAN, devices appear in **Devices** with whatever DHCP gave th
 
 | Column | Type | Notes |
 |--------|------|--------|
-| `id` | Integer PK | Prefer single row; ensure-on-read |
+| `id` | Integer PK | **Always `1`** for the active plan |
 | `name` | String | Default `"Home LAN"` |
 | `cidr` | String nullable | e.g. `192.168.1.0/24`; used for IP validation |
 | `notes` | Text nullable | |
 | `updated_at` | DateTime | |
+
+**Singleton enforce (required):**
+
+1. **Hardcoded id:** the only active plan row has `id = 1`.  
+2. **`ensure_plan(db)` on every read path** (GET planner, mutations that need a plan):  
+   - `SELECT` where `id == 1`; if missing, `INSERT` with `id=1`, `name="Home LAN"`, `cidr` from settings `scan_subnet` if present.  
+   - Never insert a second plan row; never allocate a new PK for “another plan”.  
+3. Import **replaces slots/ports of plan id=1**, does not create a second plan.  
+4. Optional DB check: if `COUNT(*) > 1` on `network_plans`, treat as data error (log / refuse) — defensive only.
 
 ### 5.2 `plan_slots`
 
@@ -64,7 +73,7 @@ After scanning the LAN, devices appear in **Devices** with whatever DHCP gave th
 | `planned_ip` | String nullable | Unique among non-null in plan |
 | `hostname_hint` | String nullable | Desired name |
 | `role_label` | String nullable | “NAS”, “Cam porch” |
-| `device_mac` | String nullable | Normalized uppercase MAC; unique if set |
+| `device_mac` | String nullable | **Canonical lowercase** `aa:bb:cc:dd:ee:ff`; unique if set |
 | `notes` | Text nullable | |
 
 **Rules**
@@ -73,7 +82,10 @@ After scanning the LAN, devices appear in **Devices** with whatever DHCP gave th
 - At most one slot per MAC per plan.  
 - `planned_ip` unique when not null.  
 - If `plan.cidr` set and `planned_ip` set ⇒ IP must fall in CIDR (backend validate).  
-- Deleting a Device does **not** delete the slot; live fields become empty / unknown.
+- Deleting a Device does **not** delete the slot; live fields become empty / unknown.  
+- **MAC canon:** same as `devices.mac` — lowercase colon form. Normalize on every write (API, import). Join Devices by **exact** stored form after normalize (no dual case).  
+
+> **Migration note:** early Planner implementation stored uppercase MACs; bring existing `device_mac` rows to lowercase in a one-shot normalize on read/write or startup.
 
 ### 5.3 `plan_ports`
 
@@ -89,7 +101,7 @@ After scanning the LAN, devices appear in **Devices** with whatever DHCP gave th
 
 ### 5.4 Live enrichment (read model, not stored)
 
-When returning a slot, join Devices by MAC (case-insensitive normalize):
+When returning a slot, join Devices by **normalized lowercase MAC** (same canon as inventory):
 
 - `live_ip`, `live_status`, `device_id` (nullable if no inventory row)
 
@@ -120,7 +132,7 @@ When returning a slot, join Devices by MAC (case-insensitive normalize):
       "planned_ip": "192.168.1.1",
       "hostname_hint": "gateway",
       "role_label": "Router",
-      "device_mac": "AA:BB:CC:DD:EE:FF",
+      "device_mac": "aa:bb:cc:dd:ee:ff",
       "notes": null,
       "ports": [
         { "port": 80, "label": "Web UI", "sort_order": 0 }
@@ -157,7 +169,7 @@ Auth: same JWT cookie as rest of app. Prefix: `/api/planner`.
 - `409` — duplicate planned_ip or MAC  
 - `404` — missing slot/port  
 
-**Ensure plan:** on first GET, create plan with `name="Home LAN"`, `cidr` from settings `scan_subnet` if present.
+**Ensure plan:** see §5.1 — `ensure_plan` creates **id=1** only (`name="Home LAN"`, `cidr` from settings `scan_subnet` if present).
 
 ## 8. Frontend
 

@@ -39,11 +39,14 @@ The app already discovers hosts (ping + ARP), tracks online/offline, and notifie
 | Product slice | Home hygiene (option A) |
 | UI surface | Devices + DeviceDetail + **Hygiene** page (option B) |
 | Port scanning | Quick ports after each network scan; full Settings ports on demand (option D) |
+| Port merge | **Scoped merge** for quick and full — only claim truth about scanned ports (§6.1) |
 | Score + checklist | Device + network score; checklist separate, not hard-bound to score (option D) |
 | Architecture | Events-first: `DeviceEvent` + scoring service + `/api/hygiene` |
 | Port probe method | TCP connect (short timeout); nmap optional later |
 | NEW badge | Computed: `first_seen` within window (default 24h); no extra column |
 | Planner ports | Unchanged; do not write open_ports into plan |
+| MAC storage | Project-wide **lowercase** `aa:bb:cc:dd:ee:ff` (Devices + Planner) |
+| Event vs notification | Separate enums; map `went_offline` → notification `device_offline` (§5.2.1) |
 
 ---
 
@@ -58,7 +61,15 @@ The app already discovers hosts (ping + ARP), tracks online/offline, and notifie
 | `ports_scanned_at` | DateTime nullable | Last successful port probe (any kind) |
 | `security_score` | Integer nullable | Cached 0–100; recompute on relevant changes |
 
-Existing fields reused: `first_seen`, `vendor`, `hostname`, `name`, `status`, `last_seen`, `mac`, `ip`.
+**Existing fields reused** (as shipped in code; Doc 1 originally omitted post-MVP columns — Doc 1 updated):
+
+| Field | Notes |
+|-------|--------|
+| `mac` | **Canonical lowercase** `aa:bb:cc:dd:ee:ff` (project-wide; same as Planner `device_mac`) |
+| `ip`, `vendor`, `hostname` | discovery / OUI / reverse DNS |
+| `name` | user-assigned label; never overwritten by scan/DNS (`Device.name` in code) |
+| `type`, `icon` | user classification / UI |
+| `status`, `last_seen`, `first_seen` | presence |
 
 **Computed (API only, not stored):**
 
@@ -70,20 +81,35 @@ Existing fields reused: `first_seen`, `vendor`, `hostname`, `name`, `status`, `l
 |--------|------|--------|
 | `id` | Integer PK | |
 | `device_id` | FK → devices, nullable | Null reserved for future network-level events; v1 always set |
-| `type` | String(32) | See event types |
+| `type` | String(32) | **Event type** — see below; **not** always equal to `notification.type` |
 | `details` | JSON nullable | e.g. `{ "old": "...", "new": "..." }` |
 | `created_at` | DateTime TZ | |
 
 **Event types (v1):**
 
-| Type | When | Notification |
-|------|------|--------------|
-| `new_device` | First time MAC seen | Yes (existing) |
-| `ip_changed` | IP differs from stored | Yes (existing) |
-| `went_offline` | Was online, missing from scan | Yes (existing) |
-| `came_online` | Was offline, seen again | Event only, no notification |
-| `port_opened` | Port newly present in open set | Notification **only if** port ∈ RISKY_PORTS |
-| `port_closed` | Port no longer present | Event only |
+| `device_events.type` | When |
+|----------------------|------|
+| `new_device` | First time MAC seen |
+| `ip_changed` | IP differs from stored |
+| `went_offline` | Was online, missing from scan |
+| `came_online` | Was offline, seen again |
+| `port_opened` | Port newly present in open set |
+| `port_closed` | Port no longer present |
+
+#### 5.2.1 Mapping `device_events.type` → `notification.type`
+
+Two **independent** string enums. Events are the durable timeline; notifications are user-facing inbox rows. Always write the **event** first; create a **notification** only when the mapping says so.
+
+| Event type | Notification created? | `notification.type` | Notes |
+|------------|----------------------|---------------------|--------|
+| `new_device` | Yes | `new_device` | Same string |
+| `ip_changed` | Yes | `ip_changed` | Same string |
+| `went_offline` | Yes | **`device_offline`** | **Different string** — keep legacy notification value for API/UI |
+| `came_online` | No | — | Event only |
+| `port_opened` | Only if `port ∈ RISKY_PORTS` | `port_opened` | `details` include port; non-risky open → event only |
+| `port_closed` | No | — | Event only |
+
+Implementers must not invent a `notification.type = went_offline` or `device_events.type = device_offline`. Helper recommended: `maybe_notify(event_type, details) → notification.type | None`.
 
 ### 5.3 `hygiene_checklist_items` (new)
 
@@ -110,10 +136,12 @@ Checklist **does not** modify device or network security score in v1.
 
 ### 5.4 Settings keys
 
-| Key | Meaning |
-|-----|---------|
-| `scan_ports` | Full/manual deep scan CSV (existing) |
-| `quick_ports` | After-each-scan probe CSV; default `22,80,443,445,3389,8080,8443` |
+| Key | Meaning | When used |
+|-----|---------|-----------|
+| `scan_ports` | Full / deep port list CSV | **Manual only** — `POST /api/devices/{id}/scan-ports`, `POST /api/hygiene/scan-ports` |
+| `quick_ports` | Light port list CSV; default `22,80,443,445,3389,8080,8443` | **Automatic** after each network scan job |
+
+This **supersedes** Doc 1’s implication that `scan_ports` runs on every scan. Doc 1 settings table now points here.
 
 Optional constant (no setting unless needed): `NEW_DEVICE_HOURS = 24`.
 
@@ -132,22 +160,42 @@ Extend existing `run_scan_job` (same lock):
 6. apply_scan_results + DeviceEvent + score recompute
 ```
 
-### 6.1 Port merge rules
+### 6.1 Port merge rules (scoped merge — same policy for quick and full)
 
-- **Quick scan:** update ports that appear in the quick set; do **not** drop ports discovered only by a previous full scan that are outside the quick set.
-- **Full scan:** replace the port set for all ports that were in the scanned list; result tagged `source=full`. Ports not in the scanned list may be cleared or left — **v1: replace with full-scan result only** (full scan defines current open snapshot for those ports; simplest: set `open_ports` to full result entirely when full scan runs for that host).
+**Decision (locked):** A probe only claims truth about ports it actually scanned. It never wipes ports outside its scan list.
+
+Algorithm for both quick and full, given `scanned_ports: set[int]` and `open_now: set[int]` (ports that accepted connect):
+
+1. Start from previous `open_ports` list (or `[]`).
+2. For each `p` in `scanned_ports`:
+   - if `p ∈ open_now` → upsert entry `{ port: p, service, source }` where `source` is `quick` or `full`
+   - if `p ∉ open_now` → **remove** `p` from stored open_ports (closed among probed)
+3. Ports **not** in `scanned_ports` → **leave unchanged** (preserves prior quick/full discoveries outside this probe list).
+
+| Probe | `scanned_ports` source | `source` tag on upserts |
+|-------|------------------------|-------------------------|
+| Quick (auto after network scan) | Settings `quick_ports` | `quick` |
+| Full (manual endpoint) | Settings `scan_ports` | `full` |
+
+**Not chosen:** “full = authoritative snapshot of entire host” (would delete open ports found only by quick if they are outside `scan_ports`). If we ever want that mode, it needs an explicit API flag — out of v1.
+
+**Examples**
+
+- Had `{80:full, 22:quick}`; quick scans `{22,80,443}`, only 80 open → result `{80:quick}` (22 removed as closed in quick set; no other full-only ports).  
+- Had `{445:quick, 8443:full}`; full scans `{80,443,8080}` all closed → still keeps `{445:quick, 8443:full}` because 445/8443 were not in the full list.
 
 ### 6.2 Failure isolation
 
 - Port probe or latency failure for one host must not abort the whole scan.
-- Missing ports → empty list / previous ports kept only if probe failed entirely (prefer: leave previous `open_ports` if probe error; update if probe succeeded with empty open set).
+- If the probe **errors** (timeout infrastructure, exception) for a host → **do not change** that host’s `open_ports`.
+- If the probe **succeeds** and all scanned ports are closed → apply removals for those scanned ports only (step 2 above).
 
 ### 6.3 Full port scan (on demand)
 
-- `POST /api/devices/{id}/scan-ports` — Settings `scan_ports`
+- `POST /api/devices/{id}/scan-ports` — Settings `scan_ports`, scoped merge §6.1
 - `POST /api/hygiene/scan-ports` — all online devices; uses same scan lock; **409** if busy
 
-Manual **Ping** already exists: also **persist** `latency_ms` and recompute score if needed (score does not use latency; only field update).
+Manual **Ping** already exists: also **persist** `latency_ms` (score does not use latency).
 
 ---
 
@@ -303,5 +351,21 @@ Do **not** introduce a parallel `scanner/` package tree unless refactor is neede
 | Port tool | TCP connect first |
 | Network score empty | null + empty UI |
 | Notifications for every port change | Only risky opens |
+| `Device.name` | Real column (user label); Doc 1 backfilled |
+| MAC case Devices vs Planner | **One canon: lowercase** `aa:bb:cc:dd:ee:ff` everywhere; migrate Planner uppercase rows |
+| Event vs notification type strings | Independent enums; map offline `went_offline` → `device_offline`; see §5.2.1 |
+| Full scan vs keep prior ports | **Scoped merge** for both quick and full (§6.1) — not full wipe |
+| Doc 1 `scan_ports` auto | Superseded: auto=`quick_ports`, manual=`scan_ports` |
 
 No TBD left for v1 scope.
+
+## 14. Spec cross-links / errata applied (2026-08-12 review)
+
+| Item | Where fixed |
+|------|-------------|
+| `name` / `icon` on devices | Doc 1 data model + this §5.1 |
+| MAC canon lowercase | Doc 1, Doc 2, this §5.1; Planner JSON example lowercase |
+| Notification enum + mapping | Doc 1 notifications + this §5.2.1 |
+| Port merge contradiction | This §6.1 scoped merge |
+| `scan_ports` semantics | Doc 1 settings + scanner + this §5.4 |
+| Planner singleton | Doc 2 §5.1 `id=1` + `ensure_plan` |
