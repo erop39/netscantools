@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
 import {
   btnPrimaryClassName,
@@ -247,7 +248,7 @@ export function Settings() {
     <div>
       <PageHeader
         title="Settings"
-        description="Scan network, schedule, and UI appearance"
+        description="Appearance and advanced defaults"
       />
 
       {loading && <LoadingState label="Loading settings…" />}
@@ -326,7 +327,21 @@ export function Settings() {
           </GlassCard>
 
           <GlassCard>
-            <h2 className="mb-4 text-sm font-medium text-white/90">Network scan</h2>
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-medium text-white/90">Network scan defaults</h2>
+                <p className="mt-1 text-xs text-white/50">
+                  Primary controls live on the{" "}
+                  <Link to="/scans" className="text-sky-300/90 hover:text-sky-200">
+                    Scans
+                  </Link>{" "}
+                  page — subnet, start scan, and history.
+                </p>
+              </div>
+              <Link to="/scans" className={btnSecondaryClassName}>
+                Open Scans →
+              </Link>
+            </div>
             <div className="flex flex-col gap-4">
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
                 Scan subnet (CIDR)
@@ -338,9 +353,6 @@ export function Settings() {
                   required
                   className={fieldClassName}
                 />
-                <span className="text-xs text-white/45">
-                  Example: 192.168.0.0/24 — used for ping sweep + ARP discovery
-                </span>
               </label>
 
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
@@ -353,9 +365,7 @@ export function Settings() {
                   required
                   className={fieldClassName}
                 />
-                <span className="text-xs text-white/45">
-                  Set to 0 to disable automatic scheduled scans
-                </span>
+                <span className="text-xs text-white/45">0 disables auto-scan</span>
               </label>
 
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
@@ -368,9 +378,6 @@ export function Settings() {
                   required
                   className={fieldClassName}
                 />
-                <span className="text-xs text-white/45">
-                  Comma-separated ports checked for open web UIs
-                </span>
               </label>
             </div>
           </GlassCard>

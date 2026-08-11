@@ -12,6 +12,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.4.6] — 2026-08-11
+
+### Changed
+
+- Scans page: Network scan control panel at the top (subnet, interval, ports, Start scan)
+- Settings: network fields kept as defaults with link to Scans as primary workflow
+
 ## [0.4.5] — 2026-08-11
 
 ### Added
