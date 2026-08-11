@@ -9,7 +9,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Planned
 
-- (none for MVP)
+- Inventory journal (post-MVP)
+- Docker deploy + VPN docs (post-MVP)
+
+## [0.4.0] — 2026-08-11
+
+### Added
+
+- Notifications UI
+- Settings UI (subnet, interval, ports)
+
+### Changed
+
+- MVP feature set complete per design spec
 
 ## [0.3.0] — 2026-08-11
 

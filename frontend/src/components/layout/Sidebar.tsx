@@ -1,5 +1,7 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../api/client";
+import type { Notification } from "../../types";
 
 const navItems = [
   { to: "/", label: "Home", end: true },
@@ -11,6 +13,25 @@ const navItems = [
 
 export function Sidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await apiFetch<Notification[]>("/api/notifications");
+        if (!cancelled) {
+          setUnread(list.filter((n) => !n.read).length);
+        }
+      } catch {
+        // badge is optional
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname]);
 
   async function handleLogout() {
     try {
@@ -36,12 +57,17 @@ export function Sidebar() {
             end={"end" in item ? item.end : false}
             className={({ isActive }) =>
               [
-                "flex h-[50px] items-center rounded-md px-4 text-[15px] text-white/95 transition-colors",
+                "flex h-[50px] items-center justify-between rounded-md px-4 text-[15px] text-white/95 transition-colors",
                 isActive ? "bg-white/10" : "hover:bg-white/[0.03]",
               ].join(" ")
             }
           >
-            {item.label}
+            <span>{item.label}</span>
+            {item.to === "/notifications" && unread > 0 && (
+              <span className="min-w-[22px] rounded-full bg-sky-500/30 px-1.5 py-0.5 text-center text-xs font-medium text-sky-100">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

@@ -79,11 +79,12 @@ Backend поднимется на `:8000`, frontend — на `:3000` (порт �
 
 ## Roadmap
 
-- [ ] MVP: CLI-скрипт ARP-скана с записью в SQLite
-- [ ] REST API (FastAPI) поверх БД
-- [ ] Web UI по дизайну (тёмная тема, боковое меню)
-- [ ] Ручной журнал/инвентарь с привязкой web-UI ссылок
-- [ ] Расписание сканирований + уведомления
+- [x] MVP: Windows scanner (ping + ARP) с записью в SQLite
+- [x] REST API (FastAPI) поверх БД
+- [x] Web UI по дизайну (тёмная тема, glass sidebar)
+- [x] Devices inventory с web-UI ссылками (LAN / external)
+- [x] Расписание сканирований + уведомления
+- [ ] Inventory journal (расширенный журнал) — post-MVP
 - [ ] Docker-деплой + инструкция по VPN для внешнего доступа
 
 ## Лицензия
