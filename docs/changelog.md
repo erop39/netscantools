@@ -12,6 +12,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.4.7] — 2026-08-11
+
+### Added
+
+- **Resolve all** — reverse-DNS every device with an IP (`POST /api/devices/resolve-all`)
+- **Rename** — manual `name` field (not overwritten by scan/DNS); rename in list + detail
+- **Export HTML / PDF** — styled inventory report with clickable LAN / Ext / HTTP / HTTPS web UI links
+
 ## [0.4.6] — 2026-08-11
 
 ### Changed

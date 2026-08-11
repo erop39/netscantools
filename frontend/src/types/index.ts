@@ -9,6 +9,7 @@ export interface Device {
   ip: string | null;
   vendor: string | null;
   hostname: string | null;
+  name: string | null;
   type: string | null;
   status: string;
   last_seen: string | null;
@@ -21,6 +22,7 @@ export interface Device {
 
 export interface DeviceUpdate {
   type?: string | null;
+  name?: string | null;
   notes?: string | null;
   web_ui_local?: string | null;
   web_ui_external?: string | null;
@@ -36,6 +38,13 @@ export interface PingResult {
 export interface ResolveResult {
   hostname: string | null;
   device: Device;
+}
+
+export interface ResolveAllResult {
+  total: number;
+  resolved: number;
+  failed: number;
+  devices: Device[];
 }
 
 export interface LastScan {

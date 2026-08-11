@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
 import {
+  btnPrimaryClassName,
   btnSecondaryClassName,
   EmptyState,
   ErrorBanner,
@@ -10,20 +11,31 @@ import {
   PageHeader,
   StatusBadge,
 } from "../components/ui";
+import { deviceLabel } from "../lib/deviceLabel";
+import { downloadHtmlReport, printPdfReport } from "../lib/exportReport";
 import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
-import type { Device, PingResult, ResolveResult } from "../types";
+import type {
+  Device,
+  PingResult,
+  ResolveAllResult,
+  ResolveResult,
+} from "../types";
 
-type ActionState = { kind: "ping" | "resolve"; text: string; ok?: boolean };
+type ActionState = { kind: "ping" | "resolve" | "rename"; text: string; ok?: boolean };
 
 export function Devices() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [actionMsg, setActionMsg] = useState<Record<number, ActionState>>({});
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   async function loadDevices() {
     setLoading(true);
@@ -61,11 +73,7 @@ export function Devices() {
         [d.id]: { kind: "ping", text: r.message, ok: r.ok },
       }));
       setDevices((list) =>
-        list.map((x) =>
-          x.id === d.id
-            ? { ...x, status: r.ok ? "online" : "offline" }
-            : x,
-        ),
+        list.map((x) => (x.id === d.id ? { ...x, status: r.ok ? "online" : "offline" } : x)),
       );
     } catch (err) {
       setActionMsg((m) => ({
@@ -92,7 +100,7 @@ export function Devices() {
         ...m,
         [d.id]: {
           kind: "resolve",
-          text: r.hostname ? `→ ${r.hostname}` : "No PTR record",
+          text: r.hostname ? `DNS → ${r.hostname}` : "No PTR record",
           ok: Boolean(r.hostname),
         },
       }));
@@ -113,46 +121,160 @@ export function Devices() {
     }
   }
 
+  async function onResolveAll() {
+    setBulkBusy(true);
+    setBanner(null);
+    setError(null);
+    try {
+      const r = await apiFetch<ResolveAllResult>("/api/devices/resolve-all", {
+        method: "POST",
+      });
+      setDevices(r.devices);
+      setBanner(
+        `Resolve all: ${r.resolved} of ${r.total} hosts got a DNS name` +
+          (r.failed ? ` (${r.failed} without PTR)` : ""),
+      );
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? `Resolve all failed (${err.status})`
+          : "Resolve all failed",
+      );
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  function startRename(d: Device) {
+    setRenamingId(d.id);
+    setRenameValue(d.name ?? "");
+  }
+
+  async function saveRename(d: Device) {
+    setBusyId(d.id);
+    try {
+      const updated = await apiFetch<Device>(`/api/devices/${d.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: renameValue.trim() || null }),
+      });
+      setDevices((list) => list.map((x) => (x.id === d.id ? updated : x)));
+      setActionMsg((m) => ({
+        ...m,
+        [d.id]: {
+          kind: "rename",
+          text: updated.name ? `Named “${updated.name}”` : "Name cleared",
+          ok: true,
+        },
+      }));
+      setRenamingId(null);
+    } catch (err) {
+      setActionMsg((m) => ({
+        ...m,
+        [d.id]: {
+          kind: "rename",
+          text: err instanceof ApiError ? `Rename failed (${err.status})` : "Rename failed",
+          ok: false,
+        },
+      }));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function onExportHtml() {
+    downloadHtmlReport(devices);
+    setBanner("HTML report downloaded");
+  }
+
+  function onExportPdf() {
+    try {
+      printPdfReport(devices);
+      setBanner("Print dialog opened — choose “Save as PDF”");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "PDF export failed");
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title="Devices"
-        description="Discovered network equipment — open web UI, ping, resolve hostname"
+        description="Inventory — open web UI, ping, resolve DNS, rename, export"
         actions={
-          <form
-            className="flex flex-wrap items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setQuery(q);
-            }}
-          >
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className={`${fieldClassName} h-[40px] w-auto min-w-[120px]`}
-              aria-label="Filter by status"
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={bulkBusy || devices.length === 0}
+              onClick={() => void onResolveAll()}
+              className={btnSecondaryClassName + " h-[40px]"}
+              title="Reverse-DNS all devices with an IP"
             >
-              <option value="">All statuses</option>
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-              <option value="unknown">Unknown</option>
-            </select>
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search IP, MAC, host…"
-              className={`${fieldClassName} h-[40px] w-52`}
-            />
-            <button type="submit" className={btnSecondaryClassName + " h-[40px]"}>
-              Search
+              {bulkBusy ? "Resolving…" : "Resolve all"}
             </button>
-          </form>
+            <button
+              type="button"
+              disabled={devices.length === 0}
+              onClick={onExportHtml}
+              className={btnSecondaryClassName + " h-[40px]"}
+            >
+              Export HTML
+            </button>
+            <button
+              type="button"
+              disabled={devices.length === 0}
+              onClick={onExportPdf}
+              className={btnPrimaryClassName + " h-[40px]"}
+            >
+              Export PDF
+            </button>
+          </div>
         }
       />
 
+      <form
+        className="mb-4 flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setQuery(q);
+        }}
+      >
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className={`${fieldClassName} h-[40px] w-auto min-w-[120px]`}
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+          <option value="unknown">Unknown</option>
+        </select>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search name, IP, MAC, host…"
+          className={`${fieldClassName} h-[40px] w-56`}
+        />
+        <button type="submit" className={btnSecondaryClassName + " h-[40px]"}>
+          Search
+        </button>
+      </form>
+
       {loading && <LoadingState label="Loading devices…" />}
-      {error && <ErrorBanner message={error} />}
+      {error && (
+        <div className="mb-4">
+          <ErrorBanner message={error} />
+        </div>
+      )}
+      {banner && (
+        <div
+          className="mb-4 rounded-[12px] border border-sky-400/30 bg-sky-500/15 px-4 py-3 text-sm text-sky-100"
+          role="status"
+        >
+          {banner}
+        </div>
+      )}
 
       {!loading && !error && devices.length === 0 && (
         <EmptyState
@@ -167,10 +289,10 @@ export function Devices() {
             <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-white/50">
               <tr>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">IP</th>
                 <th className="px-4 py-3 font-medium">MAC</th>
-                <th className="px-4 py-3 font-medium">Hostname</th>
-                <th className="px-4 py-3 font-medium">Vendor</th>
+                <th className="px-4 py-3 font-medium">DNS host</th>
                 <th className="px-4 py-3 font-medium">Open</th>
                 <th className="px-4 py-3 font-medium">Tools</th>
                 <th className="px-4 py-3 font-medium" />
@@ -181,16 +303,57 @@ export function Devices() {
                 const http = httpUrlForIp(d.ip);
                 const https = httpsUrlForIp(d.ip);
                 const msg = actionMsg[d.id];
-                const busy = busyId === d.id;
+                const busy = busyId === d.id || bulkBusy;
+                const isRenaming = renamingId === d.id;
                 return (
                   <tr key={d.id} className="hover:bg-white/[0.03]">
                     <td className="px-4 py-3">
                       <StatusBadge status={d.status} />
                     </td>
+                    <td className="px-4 py-3">
+                      {isRenaming ? (
+                        <div className="flex min-w-[160px] flex-col gap-1.5">
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") void saveRename(d);
+                              if (e.key === "Escape") setRenamingId(null);
+                            }}
+                            placeholder="Friendly name"
+                            className={`${fieldClassName} h-[36px]`}
+                          />
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              className={btnSecondaryClassName}
+                              disabled={busy}
+                              onClick={() => void saveRename(d)}
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              className={btnSecondaryClassName}
+                              onClick={() => setRenamingId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="font-medium text-white/90">{deviceLabel(d)}</div>
+                          {d.name && d.hostname && (
+                            <div className="text-[11px] text-white/40">{d.hostname}</div>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-mono text-white/90">{d.ip ?? "—"}</td>
                     <td className="px-4 py-3 font-mono text-white/70">{d.mac}</td>
-                    <td className="px-4 py-3 text-white/85">{d.hostname ?? "—"}</td>
-                    <td className="px-4 py-3 text-white/70">{d.vendor ?? "—"}</td>
+                    <td className="px-4 py-3 text-white/70">{d.hostname ?? "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
                         <button
@@ -216,7 +379,6 @@ export function Devices() {
                           disabled={!http}
                           onClick={() => openExternal(http)}
                           className={btnSecondaryClassName}
-                          title={http ?? "No IP"}
                         >
                           HTTP
                         </button>
@@ -225,7 +387,6 @@ export function Devices() {
                           disabled={!https}
                           onClick={() => openExternal(https)}
                           className={btnSecondaryClassName}
-                          title={https ?? "No IP"}
                         >
                           HTTPS
                         </button>
@@ -239,18 +400,24 @@ export function Devices() {
                             disabled={!d.ip || busy}
                             onClick={() => void onPing(d)}
                             className={btnSecondaryClassName}
-                            title="ICMP ping"
                           >
-                            {busy ? "…" : "Ping"}
+                            Ping
                           </button>
                           <button
                             type="button"
                             disabled={!d.ip || busy}
                             onClick={() => void onResolve(d)}
                             className={btnSecondaryClassName}
-                            title="Reverse DNS (PTR)"
                           >
                             Resolve
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => startRename(d)}
+                            className={btnSecondaryClassName}
+                          >
+                            Rename
                           </button>
                         </div>
                         {msg && (

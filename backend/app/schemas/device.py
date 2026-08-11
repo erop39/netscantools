@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class DeviceOut(BaseModel):
@@ -9,6 +9,7 @@ class DeviceOut(BaseModel):
     ip: str | None
     vendor: str | None
     hostname: str | None
+    name: str | None = None
     type: str | None
     status: str
     last_seen: datetime | None
@@ -23,9 +24,18 @@ class DeviceOut(BaseModel):
 
 class DeviceUpdate(BaseModel):
     type: str | None = None
+    name: str | None = None
     notes: str | None = None
     web_ui_local: str | None = None
     web_ui_external: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        cleaned = v.strip()
+        return cleaned or None
 
 
 class PingOut(BaseModel):
@@ -38,3 +48,10 @@ class PingOut(BaseModel):
 class ResolveOut(BaseModel):
     hostname: str | None
     device: DeviceOut
+
+
+class ResolveAllOut(BaseModel):
+    total: int
+    resolved: int
+    failed: int
+    devices: list[DeviceOut]

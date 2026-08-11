@@ -14,6 +14,8 @@ class Device(Base):
     ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
     vendor: Mapped[str | None] = mapped_column(String(128), nullable=True)
     hostname: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # User-assigned label; never overwritten by scan/DNS resolve
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="unknown")  # online|offline|unknown
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

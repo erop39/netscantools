@@ -7,8 +7,14 @@ from app.api.deps import get_current_user
 from app.db import get_db
 from app.models.device import Device
 from app.models.user import User
-from app.schemas.device import DeviceOut, DeviceUpdate, PingOut, ResolveOut
-from app.services.nettools import ping_detail, resolve_hostname
+from app.schemas.device import (
+    DeviceOut,
+    DeviceUpdate,
+    PingOut,
+    ResolveAllOut,
+    ResolveOut,
+)
+from app.services.nettools import ping_detail, resolve_hostname, resolve_hostnames
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
 
@@ -29,10 +35,42 @@ def list_devices(
             (Device.mac.ilike(like))
             | (Device.ip.ilike(like))
             | (Device.hostname.ilike(like))
+            | (Device.name.ilike(like))
             | (Device.vendor.ilike(like))
             | (Device.notes.ilike(like))
         )
     return query.order_by(Device.last_seen.desc().nullslast()).all()
+
+
+@router.post("/resolve-all", response_model=ResolveAllOut)
+def resolve_all_devices(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> ResolveAllOut:
+    """Reverse-DNS all devices that have an IP. Does not overwrite manual name."""
+    devices = db.query(Device).filter(Device.ip.isnot(None)).all()
+    ips = [d.ip for d in devices if d.ip]
+    names = resolve_hostnames(ips, concurrency=32, timeout=1.5)
+    resolved = 0
+    now = datetime.now(timezone.utc)
+    for d in devices:
+        if not d.ip:
+            continue
+        host = names.get(d.ip)
+        if host:
+            d.hostname = host
+            d.updated_at = now
+            resolved += 1
+    db.commit()
+    # refresh list
+    devices = db.query(Device).order_by(Device.last_seen.desc().nullslast()).all()
+    failed = len(ips) - resolved
+    return ResolveAllOut(
+        total=len(ips),
+        resolved=resolved,
+        failed=max(0, failed),
+        devices=devices,
+    )
 
 
 @router.get("/{device_id}", response_model=DeviceOut)
@@ -59,6 +97,7 @@ def update_device(
         raise HTTPException(status_code=404, detail="Device not found")
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(device, field, value)
+    device.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(device)
     return device
@@ -89,7 +128,6 @@ def ping_device(
     if not device.ip:
         raise HTTPException(status_code=400, detail="Device has no IP address")
     result = ping_detail(device.ip)
-    # Light status update from live ping
     device.status = "online" if result.ok else "offline"
     device.updated_at = datetime.now(timezone.utc)
     if result.ok:

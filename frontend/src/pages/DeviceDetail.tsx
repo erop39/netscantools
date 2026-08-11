@@ -14,6 +14,7 @@ import {
   PageHeader,
   StatusBadge,
 } from "../components/ui";
+import { deviceLabel } from "../lib/deviceLabel";
 import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
 import type { Device, PingResult, ResolveResult } from "../types";
 
@@ -31,6 +32,7 @@ export function DeviceDetail() {
   const [toolMsg, setToolMsg] = useState<string | null>(null);
   const [toolOk, setToolOk] = useState<boolean | null>(null);
 
+  const [name, setName] = useState("");
   const [type, setType] = useState("");
   const [notes, setNotes] = useState("");
   const [webUiLocal, setWebUiLocal] = useState("");
@@ -50,6 +52,7 @@ export function DeviceDetail() {
         const d = await apiFetch<Device>(`/api/devices/${id}`);
         if (cancelled) return;
         setDevice(d);
+        setName(d.name ?? "");
         setType(d.type ?? "");
         setNotes(d.notes ?? "");
         setWebUiLocal(d.web_ui_local ?? "");
@@ -83,6 +86,7 @@ export function DeviceDetail() {
       const updated = await apiFetch<Device>(`/api/devices/${id}`, {
         method: "PATCH",
         body: JSON.stringify({
+          name: name.trim() || null,
           type: type.trim() || null,
           notes: notes.trim() || null,
           web_ui_local: webUiLocal.trim() || null,
@@ -90,6 +94,7 @@ export function DeviceDetail() {
         }),
       });
       setDevice(updated);
+      setName(updated.name ?? "");
       setSuccess("Device updated");
     } catch (err) {
       setError(
@@ -104,7 +109,7 @@ export function DeviceDetail() {
 
   async function onDelete() {
     if (!id || !device) return;
-    const label = device.hostname || device.ip || device.mac;
+    const label = deviceLabel(device);
     if (!window.confirm(`Delete device ${label}? This cannot be undone.`)) {
       return;
     }
@@ -168,7 +173,7 @@ export function DeviceDetail() {
   return (
     <div>
       <PageHeader
-        title="Device detail"
+        title={device ? deviceLabel(device) : "Device detail"}
         description={device ? device.mac : "Edit inventory fields"}
         actions={
           <Link to="/devices" className={btnSecondaryClassName + " h-[40px]"}>
@@ -207,7 +212,11 @@ export function DeviceDetail() {
                 <dd className="mt-0.5 font-mono text-white/90">{device.mac}</dd>
               </div>
               <div>
-                <dt className="text-white/45">Hostname</dt>
+                <dt className="text-white/45">Name (manual)</dt>
+                <dd className="mt-0.5 text-white/90">{device.name ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-white/45">DNS hostname</dt>
                 <dd className="mt-0.5 text-white/90">{device.hostname ?? "—"}</dd>
               </div>
               <div>
@@ -299,6 +308,20 @@ export function DeviceDetail() {
               Editable fields
             </h2>
             <form onSubmit={onSave} className="flex flex-col gap-4">
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Name (rename)
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Living room AP, NAS, Camera porch…"
+                  className={fieldClassName}
+                />
+                <span className="text-xs text-white/45">
+                  Manual label — not overwritten by scan or DNS resolve
+                </span>
+              </label>
+
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
                 Type
                 <input

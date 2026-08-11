@@ -8,7 +8,7 @@ from app.api import notifications as notifications_router
 from app.api import scans as scans_router
 from app.api import settings as settings_router
 from app.config import get_settings
-from app.db import Base, SessionLocal, engine
+from app.db import Base, SessionLocal, engine, ensure_schema
 from app import models  # noqa: F401 — register models
 from app.services.auth import ensure_admin_user, ensure_default_settings
 from app.services.scheduler import start_scheduler, stop_scheduler
@@ -33,6 +33,7 @@ app.include_router(settings_router.router)
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_schema()
     db = SessionLocal()
     try:
         ensure_admin_user(db)

@@ -87,3 +87,39 @@ def test_resolve_device_mocked(client, db_session, monkeypatch):
     body = r.json()
     assert body["hostname"] == "nas.home.local"
     assert body["device"]["hostname"] == "nas.home.local"
+
+
+def test_rename_device(client, db_session):
+    apply_scan_results(
+        db_session,
+        [HostResult(mac="aa:bb:cc:dd:ee:55", ip="192.168.1.55", hostname="auto.local", vendor=None)],
+    )
+    _login(client)
+    devices = client.get("/api/devices").json()
+    dev_id = next(d["id"] for d in devices if d["mac"] == "aa:bb:cc:dd:ee:55")
+    r = client.patch(f"/api/devices/{dev_id}", json={"name": "  Porch camera  "})
+    assert r.status_code == 200
+    assert r.json()["name"] == "Porch camera"
+    assert r.json()["hostname"] == "auto.local"
+
+
+def test_resolve_all_mocked(client, db_session, monkeypatch):
+    apply_scan_results(
+        db_session,
+        [
+            HostResult(mac="aa:bb:cc:dd:ee:01", ip="192.168.1.1", hostname=None, vendor=None),
+            HostResult(mac="aa:bb:cc:dd:ee:02", ip="192.168.1.2", hostname=None, vendor=None),
+        ],
+    )
+    _login(client)
+    monkeypatch.setattr(
+        "app.api.devices.resolve_hostnames",
+        lambda ips, concurrency=32, timeout=1.5: {ips[0]: "gw.local"} if ips else {},
+    )
+    r = client.post("/api/devices/resolve-all")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 2
+    assert body["resolved"] == 1
+    hosts = {d["mac"]: d["hostname"] for d in body["devices"]}
+    assert hosts["aa:bb:cc:dd:ee:01"] == "gw.local"
