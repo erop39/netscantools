@@ -12,6 +12,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.8.0] — 2026-08-12
+
+### Added
+
+- Hygiene page: network score, risk cards, checklist, recent events
+- Device latency, open ports (quick after scan / full on demand), security score
+- DeviceEvent timeline; GET `/api/devices/{id}/events`
+- Settings `quick_ports` for automatic light port probe
+
+### Changed
+
+- `scan_ports` is manual deep scan only (not every network scan)
+- Planner MAC storage normalized to lowercase (canon shared with Devices)
+
 ## [0.7.4] — 2026-08-11
 
 ### Added

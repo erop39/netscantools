@@ -7,6 +7,7 @@
 - 🔍 **Сканирование сети** — обнаружение подключённого оборудования в заданной подсети (ARP-скан + опциональная проверка портов для web-UI).
 - 📋 **Журнал учёта** — собственная база оборудования с привязкой к IP/MAC, типом устройства, заметками, статусом (online/offline).
 - 🗺️ **Планировщик сети (Planner)** — singleton-план подсети: упорядоченные слоты (planned IP, MAC-привязка, резервы), порты (порт + метка), live vs planned, JSON export/import.
+- 🛡️ **Hygiene (LAN hygiene)** — network score, risk cards, security checklist, recent events; per-device latency, open ports (quick after scan / full on demand), security score and event timeline.
 - 🔗 **Web-UI ссылки** — для каждого устройства можно указать адрес панели управления как для доступа из LAN, так и для доступа извне.
 - 🔔 **Уведомления** — оповещения о новых, пропавших или изменивших IP устройствах.
 - 🕒 **Расписание сканирований** — автоматический запуск сканов по расписанию + ручной запуск из UI.
@@ -51,7 +52,8 @@
 ## Разделы интерфейса
 
 - **Home** — дашборд: количество устройств онлайн, последние изменения, статус последнего скана.
-- **Devices** — список найденного оборудования, кнопки быстрого перехода в web-UI (LAN / внешний).
+- **Devices** — список найденного оборудования, latency / ports / score, кнопки web-UI (LAN / внешний).
+- **Hygiene** — network score, top risks, checklist, recent events; full port scan for all online.
 - **Planner** — план сети: слоты (IP, MAC, резерв), порты, сверка live vs planned, JSON export/import.
 - **Scans** — расписание и история сканирований, ручной запуск.
 - **Inventory** — ручной журнал: заметки, серийные номера, место установки, привязка к устройствам/IP.
@@ -108,6 +110,7 @@ Backend `:8000`, frontend (dev) `:5173`.
 - [x] Web UI по дизайну (тёмная тема, glass sidebar)
 - [x] Devices inventory с web-UI ссылками (LAN / external)
 - [x] Расписание сканирований + уведомления
+- [x] LAN Hygiene: scores, ports/latency, DeviceEvent, Hygiene page + checklist
 - [ ] Inventory journal (расширенный журнал) — post-MVP
 - [ ] Docker-деплой + инструкция по VPN для внешнего доступа
 
