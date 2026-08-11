@@ -1,15 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType, type SVGProps } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../api/client";
 import type { Notification } from "../../types";
+import {
+  IconBell,
+  IconDevices,
+  IconHome,
+  IconLogout,
+  IconMenu,
+  IconScans,
+  IconSettings,
+} from "../icons";
 
-const navItems = [
-  { to: "/", label: "Home", end: true },
-  { to: "/devices", label: "Devices" },
-  { to: "/scans", label: "Scans" },
-  { to: "/notifications", label: "Notifications" },
-  { to: "/settings", label: "Settings" },
-] as const;
+type IconComp = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
+
+const navItems: {
+  to: string;
+  label: string;
+  end?: boolean;
+  Icon: IconComp;
+}[] = [
+  { to: "/", label: "Home", end: true, Icon: IconHome },
+  { to: "/devices", label: "Devices", Icon: IconDevices },
+  { to: "/scans", label: "Scans", Icon: IconScans },
+  { to: "/notifications", label: "Notifications", Icon: IconBell },
+  { to: "/settings", label: "Settings", Icon: IconSettings },
+];
 
 export function Sidebar() {
   const navigate = useNavigate();
@@ -43,28 +59,30 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed top-6 left-6 bottom-11 z-20 flex w-[260px] flex-col gap-2 rounded-[34px] border-[3px] border-white/12 bg-black/12 p-4 backdrop-blur-[30px]">
-      <div className="mb-4 px-2 pt-1">
-        <div className="text-lg font-semibold tracking-tight text-white/95">qube.li</div>
-        <div className="text-sm text-white/60">NetInventory</div>
-      </div>
+    <aside className="glass-panel fixed top-6 left-6 bottom-11 z-20 flex w-[260px] flex-col gap-1 p-4">
+      <header className="mb-3 flex items-center gap-3 border-b border-white/[0.08] px-2 pb-4 pt-1">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 shadow-inner">
+          <span className="text-sm font-bold tracking-tight text-white/95">q</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-semibold tracking-tight text-white/95">qube.li</div>
+          <div className="text-xs text-white/55">NetInventory</div>
+        </div>
+        <IconMenu size={18} className="text-white/45" />
+      </header>
 
-      <nav className="flex flex-1 flex-col gap-2">
+      <nav className="flex flex-1 flex-col gap-1.5">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
-            end={"end" in item ? item.end : false}
-            className={({ isActive }) =>
-              [
-                "flex h-[50px] items-center justify-between rounded-md px-4 text-[15px] text-white/95 transition-colors",
-                isActive ? "bg-white/10" : "hover:bg-white/[0.03]",
-              ].join(" ")
-            }
+            end={item.end ?? false}
+            className={({ isActive }) => ["nav-item", isActive ? "is-active" : ""].join(" ")}
           >
-            <span>{item.label}</span>
+            <item.Icon size={20} className="nav-icon" />
+            <span className="flex-1">{item.label}</span>
             {item.to === "/notifications" && unread > 0 && (
-              <span className="min-w-[22px] rounded-full bg-sky-500/30 px-1.5 py-0.5 text-center text-xs font-medium text-sky-100">
+              <span className="min-w-[22px] rounded-full bg-sky-400/25 px-1.5 py-0.5 text-center text-xs font-medium text-sky-100 ring-1 ring-sky-300/25">
                 {unread > 99 ? "99+" : unread}
               </span>
             )}
@@ -72,12 +90,9 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="mt-auto flex h-[50px] items-center rounded-md px-4 text-left text-[15px] text-white/80 transition-colors hover:bg-white/[0.03] hover:text-white/95"
-      >
-        Log out
+      <button type="button" onClick={handleLogout} className="nav-item mt-auto text-left">
+        <IconLogout size={20} className="nav-icon" />
+        <span>Log out</span>
       </button>
     </aside>
   );

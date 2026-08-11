@@ -48,7 +48,7 @@ export function LoadingState({ label = "Loading…" }: { label?: string }) {
 export function ErrorBanner({ message }: { message: string }) {
   return (
     <div
-      className="rounded-md border border-red-400/30 bg-red-500/15 px-4 py-3 text-sm text-red-100"
+      className="rounded-[12px] border border-red-400/30 bg-red-500/20 px-4 py-3 text-sm text-red-50 shadow-[inset_0_1px_0_rgb(255_255_255/8%)] backdrop-blur-md"
       role="alert"
     >
       {message}
@@ -58,7 +58,7 @@ export function ErrorBanner({ message }: { message: string }) {
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-12 text-center">
+    <div className="glass-card border-dashed px-6 py-12 text-center">
       <p className="text-white/80">{title}</p>
       {hint && <p className="mt-1 text-sm text-white/50">{hint}</p>}
     </div>
@@ -72,13 +72,7 @@ export function GlassCard({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <div
-      className={`rounded-2xl border border-white/12 bg-black/12 p-5 backdrop-blur-[20px] ${className}`}
-    >
-      {children}
-    </div>
-  );
+  return <div className={`glass-card p-5 ${className}`}>{children}</div>;
 }
 
 export function PageHeader({
@@ -93,7 +87,9 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-semibold text-white/95">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-white/95 drop-shadow-sm">
+          {title}
+        </h1>
         {description && <p className="mt-1 text-sm text-white/60">{description}</p>}
       </div>
       {actions}
@@ -102,13 +98,13 @@ export function PageHeader({
 }
 
 export const fieldClassName =
-  "h-[44px] w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white/95 outline-none focus:border-white/30";
+  "glass-input h-[44px] w-full px-3 text-sm";
 
 export const btnPrimaryClassName =
-  "inline-flex h-[44px] items-center justify-center rounded-md bg-white/10 px-4 text-sm font-medium text-white/95 transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-glass inline-flex h-[44px] items-center justify-center px-4 text-sm font-medium";
 
 export const btnSecondaryClassName =
-  "inline-flex h-[36px] items-center justify-center rounded-md border border-white/12 bg-white/5 px-3 text-xs font-medium text-white/85 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40";
+  "btn-glass inline-flex h-[36px] items-center justify-center px-3 text-xs font-medium";
 
 export const btnDangerClassName =
-  "inline-flex h-[44px] items-center justify-center rounded-md border border-red-400/30 bg-red-500/15 px-4 text-sm font-medium text-red-100 transition-colors hover:bg-red-500/25 disabled:opacity-50";
+  "inline-flex h-[44px] items-center justify-center rounded-[10px] border border-red-400/35 bg-red-500/20 px-4 text-sm font-medium text-red-50 shadow-[0_2px_8px_rgb(0_0_0/18%),inset_0_1px_0_rgb(255_255_255/10%)] transition-colors hover:bg-red-500/30 disabled:opacity-50";

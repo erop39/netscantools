@@ -136,7 +136,7 @@ export function Scans() {
       )}
 
       {!loading && scans.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-white/12 bg-black/12 backdrop-blur-[20px]">
+        <div className="glass-card overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-white/50">
               <tr>

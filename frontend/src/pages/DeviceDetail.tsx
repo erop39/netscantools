@@ -224,7 +224,7 @@ export function DeviceDetail() {
                   onChange={(e) => setNotes(e.target.value)}
                   rows={4}
                   placeholder="Location, credentials reminder, serial…"
-                  className="w-full rounded-md border border-white/12 bg-white/5 px-3 py-2 text-sm text-white/95 outline-none focus:border-white/30"
+                  className="glass-input w-full px-3 py-2 text-sm"
                 />
               </label>
 

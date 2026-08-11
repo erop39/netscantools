@@ -9,23 +9,30 @@ import { Notifications } from "./pages/Notifications";
 import { Scans } from "./pages/Scans";
 import { Settings } from "./pages/Settings";
 
+function Scene() {
+  return <div className="app-scene" aria-hidden />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppShell />}>
-            <Route index element={<Home />} />
-            <Route path="devices" element={<Devices />} />
-            <Route path="devices/:id" element={<DeviceDetail />} />
-            <Route path="scans" element={<Scans />} />
-            <Route path="notifications" element={<Notifications />} />
-            <Route path="settings" element={<Settings />} />
+      <Scene />
+      <div className="app-root">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppShell />}>
+              <Route index element={<Home />} />
+              <Route path="devices" element={<Devices />} />
+              <Route path="devices/:id" element={<DeviceDetail />} />
+              <Route path="scans" element={<Scans />} />
+              <Route path="notifications" element={<Notifications />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
           </Route>
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }

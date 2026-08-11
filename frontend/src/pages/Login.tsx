@@ -53,9 +53,7 @@ export function Login() {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-white/70">
-        Loading…
-      </div>
+      <div className="flex min-h-screen items-center justify-center text-white/70">Loading…</div>
     );
   }
 
@@ -65,8 +63,11 @@ export function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-[34px] border-[3px] border-white/12 bg-black/12 p-8 backdrop-blur-[30px]">
+      <div className="glass-panel w-full max-w-md p-8">
         <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/12 shadow-inner ring-1 ring-white/15">
+            <span className="text-lg font-bold text-white/95">q</span>
+          </div>
           <h1 className="text-2xl font-semibold tracking-tight text-white/95">qube.li</h1>
           <p className="mt-1 text-sm text-white/60">NetInventory</p>
         </div>
@@ -79,7 +80,7 @@ export function Login() {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="h-[50px] rounded-md border border-white/12 bg-white/5 px-4 text-white/95 outline-none focus:border-white/30"
+              className="glass-input h-[50px] px-4"
               required
             />
           </label>
@@ -91,22 +92,21 @@ export function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-[50px] rounded-md border border-white/12 bg-white/5 px-4 text-white/95 outline-none focus:border-white/30"
+              className="glass-input h-[50px] px-4"
               required
             />
           </label>
 
           {error && (
-            <p className="rounded-md bg-red-500/20 px-3 py-2 text-sm text-red-200" role="alert">
+            <p
+              className="rounded-[10px] border border-red-400/30 bg-red-500/20 px-3 py-2 text-sm text-red-100"
+              role="alert"
+            >
               {error}
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 h-[50px] rounded-md bg-white/10 text-[15px] font-medium text-white/95 transition-colors hover:bg-white/15 disabled:opacity-50"
-          >
+          <button type="submit" disabled={submitting} className="btn-glass mt-2 h-[50px] text-[15px] font-medium">
             {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>

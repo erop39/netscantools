@@ -3,19 +3,198 @@
 @tailwind utilities;
 
 :root {
-  --bg: #073e77;
-  --glass-bg: rgb(0 0 0 / 12%);
-  --glass-border: rgb(255 255 255 / 12%);
+  --bg: #041a33;
+  --bg-mid: #073e77;
+  --glass-bg: rgb(8 20 40 / 38%);
+  --glass-bg-strong: rgb(6 18 36 / 48%);
+  --glass-border: rgb(255 255 255 / 14%);
+  --glass-highlight: rgb(255 255 255 / 10%);
+  --text: rgb(255 255 255 / 95%);
+  --text-muted: rgb(255 255 255 / 62%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  min-height: 100vh;
+  color: var(--text);
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
   background-color: var(--bg);
-  color: rgb(255 255 255 / 95%);
-  font-family: system-ui, sans-serif;
+  /* Atmospheric night scene — image + deep blue fallback */
+  background-image:
+    linear-gradient(
+      180deg,
+      rgb(2 10 24 / 35%) 0%,
+      rgb(4 20 48 / 20%) 40%,
+      rgb(2 12 28 / 45%) 100%
+    ),
+    url("/bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
 }
 
-#root {
+/* Fixed full-viewport scene layer so glass always has something to blur */
+.app-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 75% 12%, rgb(180 210 255 / 18%), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 20% 80%, rgb(20 60 120 / 25%), transparent 60%),
+    linear-gradient(180deg, rgb(2 10 24 / 30%) 0%, transparent 35%, rgb(2 12 28 / 40%) 100%),
+    url("/bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.app-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 78% 14%, rgb(255 255 240 / 12%) 0%, transparent 8%),
+    linear-gradient(180deg, transparent 55%, rgb(2 8 20 / 35%) 100%);
+}
+
+.app-root {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
+}
+
+/* Glass panel — real translucency + blur + soft edge light */
+.glass-panel {
+  background: var(--glass-bg);
+  border: 3px solid var(--glass-border);
+  border-radius: 34px;
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
+  backdrop-filter: blur(30px) saturate(140%);
+  box-shadow:
+    0 8px 32px rgb(0 0 0 / 28%),
+    inset 0 1px 0 rgb(255 255 255 / 12%),
+    inset 0 0 0 1px rgb(255 255 255 / 4%);
+}
+
+.glass-card {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  -webkit-backdrop-filter: blur(22px) saturate(130%);
+  backdrop-filter: blur(22px) saturate(130%);
+  box-shadow:
+    0 6px 24px rgb(0 0 0 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 10%);
+}
+
+.glass-input {
+  background: rgb(255 255 255 / 7%);
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 20%);
+  color: var(--text);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.glass-input:hover {
+  background: rgb(255 255 255 / 9%);
+  border-color: rgb(255 255 255 / 20%);
+}
+
+.glass-input:focus {
+  outline: none;
+  background: rgb(255 255 255 / 10%);
+  border-color: rgb(160 200 255 / 45%);
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 18%),
+    0 0 0 3px rgb(100 160 255 / 18%);
+}
+
+.glass-input::placeholder {
+  color: rgb(255 255 255 / 40%);
+}
+
+.btn-glass {
+  background: linear-gradient(180deg, rgb(255 255 255 / 14%) 0%, rgb(255 255 255 / 8%) 100%);
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 10px;
+  box-shadow:
+    0 2px 8px rgb(0 0 0 / 18%),
+    inset 0 1px 0 rgb(255 255 255 / 14%);
+  color: var(--text);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.btn-glass:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgb(255 255 255 / 20%) 0%, rgb(255 255 255 / 12%) 100%);
+  border-color: rgb(255 255 255 / 24%);
+}
+
+.btn-glass:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-glass:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 50px;
+  width: 100%;
+  padding: 0 14px;
+  border-radius: 12px;
+  color: rgb(255 255 255 / 88%);
+  font-size: 15px;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.nav-item:hover {
+  background: rgb(255 255 255 / 5%);
+  color: rgb(255 255 255 / 98%);
+}
+
+.nav-item.is-active {
+  background: rgb(255 255 255 / 12%);
+  color: rgb(255 255 255 / 98%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%);
+}
+
+.nav-item .nav-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.nav-item.is-active .nav-icon {
+  opacity: 1;
 }

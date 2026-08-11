@@ -5,8 +5,10 @@ export function AppShell() {
   return (
     <div className="min-h-screen">
       <Sidebar />
-      <main className="min-h-screen pl-[300px] pr-8 py-8">
-        <Outlet />
+      <main className="min-h-screen py-8 pl-[300px] pr-8">
+        <div className="mx-auto max-w-6xl">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

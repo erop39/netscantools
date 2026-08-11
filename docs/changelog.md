@@ -12,6 +12,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.4.1] — 2026-08-11
+
+### Changed
+
+- Restored qube.li visual depth: night landscape background, real glassmorphism (blur + translucency + edge light)
+- Sidebar nav items now show icons + soft active highlight
+- Cards, inputs, and buttons use glass/volume styles instead of flat outlines
+
 ## [0.4.0] — 2026-08-11
 
 ### Added
