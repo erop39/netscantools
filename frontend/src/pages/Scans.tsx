@@ -283,46 +283,45 @@ export function Scans() {
           ) : (
             <div className="flex flex-col gap-5">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12">
-                <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-5">
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium uppercase tracking-wide text-white/45">
-                      Subnet (CIDR)
-                    </span>
+                <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-5">
+                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">
+                    Subnet (CIDR)
+                  </span>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+                    <select
+                      className={`${fieldClassName} cursor-pointer`}
+                      aria-label="Subnet preset"
+                      value={
+                        SUBNET_PRESETS.some((p) => p.cidr === scanSubnet.trim())
+                          ? scanSubnet.trim()
+                          : "__custom__"
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v !== "__custom__") setScanSubnet(v);
+                      }}
+                    >
+                      {SUBNET_PRESETS.map((p) => (
+                        <option key={p.cidr} value={p.cidr}>
+                          {p.label} — {p.hint}
+                        </option>
+                      ))}
+                      <option value="__custom__">Custom…</option>
+                    </select>
                     <input
                       type="text"
                       value={scanSubnet}
                       onChange={(e) => setScanSubnet(e.target.value)}
                       placeholder="192.168.1.0/24"
                       spellCheck={false}
-                      className={`${fieldClassName} font-mono text-[15px]`}
+                      className={`${fieldClassName} font-mono text-[14px]`}
                       aria-label="Scan subnet CIDR"
                     />
-                  </label>
-                  <div>
-                    <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-white/40">
-                      Quick presets
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {SUBNET_PRESETS.map((p) => {
-                        const active = scanSubnet.trim() === p.cidr;
-                        return (
-                          <button
-                            key={p.cidr}
-                            type="button"
-                            title={p.hint}
-                            className={`type-chip font-mono text-[11px] ${active ? "is-selected" : ""}`}
-                            onClick={() => setScanSubnet(p.cidr)}
-                          >
-                            {p.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="mt-1.5 text-[11px] text-white/35">
-                      {SUBNET_PRESETS.find((p) => p.cidr === scanSubnet.trim())?.hint ??
-                        "Custom range — edit the field above"}
-                    </p>
                   </div>
+                  <span className="text-[11px] text-white/40">
+                    {SUBNET_PRESETS.find((p) => p.cidr === scanSubnet.trim())?.hint ??
+                      "Custom range — type any CIDR"}
+                  </span>
                 </div>
 
                 <label className="flex flex-col gap-1.5 lg:col-span-3">

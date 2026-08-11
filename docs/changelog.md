@@ -16,7 +16,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Scans: quick subnet presets (192.168.0/1/31/88/100, 10.0.0/1, 172.16/17)
+- Scans: subnet presets as compact dropdown + manual CIDR field
 
 ## [0.5.3] — 2026-08-11
 
