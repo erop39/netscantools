@@ -22,13 +22,6 @@ export function AppShell() {
     document.documentElement.dataset.sidebar = collapsed ? "collapsed" : "expanded";
   }, [collapsed]);
 
-  useEffect(() => {
-    document.documentElement.dataset.sidebar = collapsed ? "collapsed" : "expanded";
-    return () => {
-      delete document.documentElement.dataset.sidebar;
-    };
-  }, [collapsed]);
-
   const toggle = useCallback(() => {
     setCollapsed((v) => !v);
   }, []);
@@ -37,9 +30,7 @@ export function AppShell() {
     <div className={`app-shell ${collapsed ? "is-sidebar-collapsed" : ""}`}>
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <main className="app-main">
-        <div className="app-main-inner">
-          <Outlet />
-        </div>
+        <Outlet />
       </main>
     </div>
   );

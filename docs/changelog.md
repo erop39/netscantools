@@ -17,7 +17,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Restored real glass (translucent + blur): removed dark content scrim and opaque card/input fills
-- Content top aligned with sidebar (less empty space above Home/Settings)
+- Layout rewrite: flex row shell so main content top matches sidebar top (no fixed-sidebar offset bug)
 
 ## [0.5.2] — 2026-08-11
 
