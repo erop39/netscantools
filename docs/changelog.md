@@ -12,6 +12,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.5.3] — 2026-08-11
+
+### Fixed
+
+- Restored real glass (translucent + blur): removed dark content scrim and opaque card/input fills
+
 ## [0.5.2] — 2026-08-11
 
 ### Changed
