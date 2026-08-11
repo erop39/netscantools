@@ -7,6 +7,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- FastAPI backend scaffold: config (`get_settings`), SQLAlchemy session (`get_db` / `SessionLocal`), CORS, `/api/health`
+
 ### Planned
 
 - 0.1.0 — monorepo scaffold, auth, DB models, UI shell + glass sidebar
