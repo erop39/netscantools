@@ -23,8 +23,9 @@ import {
   typeFromIcon,
   type DeviceIconKey,
 } from "../lib/deviceIcons";
+import { hasRiskyOpenPort, RISKY_PORTS, scoreClass } from "../lib/hygiene";
 import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
-import type { Device, PingResult, ResolveResult } from "../types";
+import type { Device, DeviceEvent, PingResult, ResolveResult } from "../types";
 
 function ToolIconBtn({
   label,
@@ -67,6 +68,7 @@ export function DeviceDetail() {
   const navigate = useNavigate();
 
   const [device, setDevice] = useState<Device | null>(null);
+  const [events, setEvents] = useState<DeviceEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -95,9 +97,13 @@ export function DeviceDetail() {
       setLoading(true);
       setError(null);
       try {
-        const d = await apiFetch<Device>(`/api/devices/${id}`);
+        const [d, ev] = await Promise.all([
+          apiFetch<Device>(`/api/devices/${id}`),
+          apiFetch<DeviceEvent[]>(`/api/devices/${id}/events`).catch(() => [] as DeviceEvent[]),
+        ]);
         if (cancelled) return;
         setDevice(d);
+        setEvents(ev);
         setName(d.name ?? "");
         setType(d.type ?? "");
         setIcon(d.icon ?? null);
@@ -190,7 +196,15 @@ export function DeviceDetail() {
       });
       setToolMsg(r.message);
       setToolOk(r.ok);
-      setDevice((d) => (d ? { ...d, status: r.ok ? "online" : "offline" } : d));
+      setDevice((d) =>
+        d
+          ? {
+              ...d,
+              status: r.ok ? "online" : "offline",
+              latency_ms: r.ok && r.rtt_ms != null ? r.rtt_ms : d.latency_ms,
+            }
+          : d,
+      );
     } catch (err) {
       setToolMsg(
         err instanceof ApiError ? `Ping failed (${err.status})` : "Ping failed",
@@ -225,6 +239,65 @@ export function DeviceDetail() {
     } finally {
       setToolBusy(false);
     }
+  }
+
+  async function onScanPorts() {
+    if (!id || !device?.ip) return;
+    setToolBusy(true);
+    setToolMsg(null);
+    setToolOk(null);
+    try {
+      const updated = await apiFetch<Device>(`/api/devices/${id}/scan-ports`, {
+        method: "POST",
+      });
+      setDevice(updated);
+      setToolMsg(
+        `Port scan done — ${updated.open_ports?.length ?? 0} open port${
+          (updated.open_ports?.length ?? 0) === 1 ? "" : "s"
+        }`,
+      );
+      setToolOk(true);
+      try {
+        const ev = await apiFetch<DeviceEvent[]>(`/api/devices/${id}/events`);
+        setEvents(ev);
+      } catch {
+        /* timeline refresh is best-effort */
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setToolMsg("Scan already running — try again shortly");
+      } else {
+        setToolMsg(
+          err instanceof ApiError
+            ? `Port scan failed (${err.status})`
+            : "Port scan failed",
+        );
+      }
+      setToolOk(false);
+    } finally {
+      setToolBusy(false);
+    }
+  }
+
+  function eventDetailsText(ev: DeviceEvent): string | null {
+    if (!ev.details || typeof ev.details !== "object") return null;
+    const parts: string[] = [];
+    const d = ev.details;
+    if (typeof d.port === "number") parts.push(`port ${d.port}`);
+    if (typeof d.old_ip === "string" || typeof d.new_ip === "string") {
+      parts.push(`${String(d.old_ip ?? "—")} → ${String(d.new_ip ?? "—")}`);
+    }
+    if (typeof d.ip === "string") parts.push(String(d.ip));
+    if (typeof d.message === "string") parts.push(String(d.message));
+    if (parts.length === 0) {
+      try {
+        const s = JSON.stringify(d);
+        return s === "{}" ? null : s;
+      } catch {
+        return null;
+      }
+    }
+    return parts.join(" · ");
   }
 
   function pickPreset(p: (typeof TYPE_PRESETS)[number]) {
@@ -282,7 +355,12 @@ export function DeviceDetail() {
                 <DeviceIcon name={icon || device.icon} size={26} />
               </div>
               <div className="min-w-0">
-                <div className="device-detail-title">{deviceLabel(device)}</div>
+                <div className="device-detail-title">
+                  {deviceLabel(device)}
+                  {device.is_new && (
+                    <span className="hygiene-badge hygiene-badge--new ml-2 align-middle">NEW</span>
+                  )}
+                </div>
                 <div className="device-detail-meta">
                   <StatusBadge status={device.status} />
                   <span className="device-detail-meta-sep">·</span>
@@ -291,6 +369,17 @@ export function DeviceDetail() {
                     <>
                       <span className="device-detail-meta-sep">·</span>
                       <span>{iconLabel(icon || device.icon)}</span>
+                    </>
+                  )}
+                  {device.security_score != null && (
+                    <>
+                      <span className="device-detail-meta-sep">·</span>
+                      <span
+                        className={`hygiene-score ${scoreClass(device.security_score)}`}
+                        title="Security score"
+                      >
+                        Score {device.security_score}
+                      </span>
                     </>
                   )}
                 </div>
@@ -308,9 +397,118 @@ export function DeviceDetail() {
                 </Fact>
                 <Fact label="DNS">{device.hostname ?? "—"}</Fact>
                 <Fact label="Vendor">{device.vendor ?? "—"}</Fact>
+                <Fact label="Latency">
+                  {device.latency_ms != null ? `${Math.round(device.latency_ms)} ms` : "—"}
+                </Fact>
                 <Fact label="Last seen">{formatDateTime(device.last_seen)}</Fact>
                 <Fact label="First seen">{formatDateTime(device.first_seen)}</Fact>
+                <Fact label="Ports scanned">{formatDateTime(device.ports_scanned_at)}</Fact>
               </dl>
+            </section>
+
+            <section className="device-detail-section">
+              <h2 className="device-detail-section-title">Security score</h2>
+              <div className="detail-score-block">
+                <div
+                  className={`detail-score-value ${scoreClass(device.security_score)}`}
+                  aria-label={
+                    device.security_score != null
+                      ? `Security score ${device.security_score}`
+                      : "No security score"
+                  }
+                >
+                  {device.security_score != null ? device.security_score : "—"}
+                </div>
+                {hasRiskyOpenPort(device.open_ports) && (
+                  <p className="detail-score-risk" role="status">
+                    Risky open port detected
+                  </p>
+                )}
+                {device.score_breakdown && device.score_breakdown.length > 0 ? (
+                  <ul className="detail-score-breakdown">
+                    {device.score_breakdown.map((item) => (
+                      <li key={item.code} className="detail-score-breakdown-item">
+                        <span className="detail-score-breakdown-label">{item.label}</span>
+                        <span
+                          className={
+                            item.delta < 0
+                              ? "detail-score-delta is-neg"
+                              : item.delta > 0
+                                ? "detail-score-delta is-pos"
+                                : "detail-score-delta"
+                          }
+                        >
+                          {item.delta > 0 ? `+${item.delta}` : item.delta}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="device-field-hint">
+                    {device.security_score != null
+                      ? "No penalty breakdown (score is clean)."
+                      : "Score appears after a scan or port probe."}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="device-detail-section">
+              <h2 className="device-detail-section-title">Open ports</h2>
+              {device.open_ports && device.open_ports.length > 0 ? (
+                <div className="detail-ports-wrap">
+                  <table className="detail-ports-table">
+                    <thead>
+                      <tr>
+                        <th>Port</th>
+                        <th>Service</th>
+                        <th>Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...device.open_ports]
+                        .sort((a, b) => a.port - b.port)
+                        .map((p) => {
+                          const risky = RISKY_PORTS.has(p.port);
+                          return (
+                            <tr key={`${p.port}-${p.source ?? ""}`} className={risky ? "is-risk" : undefined}>
+                              <td className="devices-mono">
+                                {p.port}
+                                {risky && (
+                                  <span className="hygiene-chip hygiene-chip--risk ml-1.5">risk</span>
+                                )}
+                              </td>
+                              <td>{p.service ?? "—"}</td>
+                              <td className="detail-ports-source">{p.source ?? "—"}</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="device-field-hint">No open ports recorded yet. Run Scan ports or a network scan.</p>
+              )}
+            </section>
+
+            <section className="device-detail-section">
+              <h2 className="device-detail-section-title">Timeline</h2>
+              {events.length === 0 ? (
+                <p className="device-field-hint">No events yet.</p>
+              ) : (
+                <ul className="detail-timeline">
+                  {events.map((ev) => {
+                    const extra = eventDetailsText(ev);
+                    return (
+                      <li key={ev.id} className="detail-timeline-item">
+                        <span className="detail-timeline-type">{ev.type.replace(/_/g, " ")}</span>
+                        <span className="detail-timeline-time">{formatDateTime(ev.created_at)}</span>
+                        {extra && <span className="detail-timeline-details">{extra}</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </section>
 
             <section className="device-detail-section">
@@ -382,6 +580,18 @@ export function DeviceDetail() {
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                       <circle cx="11" cy="11" r="7" />
                       <path d="m20 20-3.5-3.5" />
+                    </svg>
+                  </ToolIconBtn>
+                  <ToolIconBtn
+                    label="Scan ports"
+                    title="Full port scan (settings scan_ports)"
+                    disabled={!device.ip || toolBusy}
+                    onClick={() => void onScanPorts()}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M4 7h16M4 12h10M4 17h13" />
+                      <circle cx="18" cy="12" r="2" />
+                      <circle cx="20" cy="17" r="2" />
                     </svg>
                   </ToolIconBtn>
                 </div>

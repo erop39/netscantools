@@ -16,6 +16,7 @@ import { DeviceIconTrigger } from "../components/DeviceIconTrigger";
 import { deviceLabel } from "../lib/deviceLabel";
 import { typeFromIcon, type DeviceIconKey } from "../lib/deviceIcons";
 import { downloadHtmlReport, printPdfReport } from "../lib/exportReport";
+import { hasRiskyOpenPort, scoreClass } from "../lib/hygiene";
 import { httpUrlForIp, openExternal } from "../lib/links";
 import type {
   Device,
@@ -104,7 +105,15 @@ export function Devices() {
         [d.id]: { kind: "ping", text: r.message, ok: r.ok },
       }));
       setDevices((list) =>
-        list.map((x) => (x.id === d.id ? { ...x, status: r.ok ? "online" : "offline" } : x)),
+        list.map((x) =>
+          x.id === d.id
+            ? {
+                ...x,
+                status: r.ok ? "online" : "offline",
+                latency_ms: r.ok && r.rtt_ms != null ? r.rtt_ms : x.latency_ms,
+              }
+            : x,
+        ),
       );
     } catch (err) {
       setActionMsg((m) => ({
@@ -379,10 +388,19 @@ export function Devices() {
                   const busy = busyId === d.id || bulkBusy;
                   const isRenaming = renamingId === d.id;
                   const openUrl = primaryOpenUrl(d);
+                  const portCount = d.open_ports?.length ?? 0;
+                  const risky = hasRiskyOpenPort(d.open_ports);
                   return (
                     <tr key={d.id}>
                       <td className="col-status">
-                        <StatusBadge status={d.status} />
+                        <div className="devices-status-stack">
+                          <StatusBadge status={d.status} />
+                          {d.is_new && (
+                            <span className="hygiene-badge hygiene-badge--new" title="First seen within 24h">
+                              NEW
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="col-device">
                         {isRenaming ? (
@@ -432,6 +450,43 @@ export function Devices() {
                               {d.name && d.hostname && (
                                 <span className="devices-sub">{d.hostname}</span>
                               )}
+                              <div className="devices-hygiene-chips" aria-label="Hygiene summary">
+                                {d.latency_ms != null && (
+                                  <span className="hygiene-chip" title="Last ping latency">
+                                    {Math.round(d.latency_ms)} ms
+                                  </span>
+                                )}
+                                <span
+                                  className="hygiene-chip"
+                                  title={
+                                    d.ports_scanned_at
+                                      ? `Open ports (scanned ${d.ports_scanned_at})`
+                                      : "Open ports"
+                                  }
+                                >
+                                  {portCount} port{portCount === 1 ? "" : "s"}
+                                </span>
+                                {d.security_score != null ? (
+                                  <span
+                                    className={`hygiene-chip hygiene-score ${scoreClass(d.security_score)}`}
+                                    title="Security score"
+                                  >
+                                    {d.security_score}
+                                  </span>
+                                ) : (
+                                  <span className="hygiene-chip hygiene-score score-muted" title="No score yet">
+                                    —
+                                  </span>
+                                )}
+                                {risky && (
+                                  <span
+                                    className="hygiene-chip hygiene-chip--risk"
+                                    title="Risky open port detected"
+                                  >
+                                    risk
+                                  </span>
+                                )}
+                              </div>
                               {msg && (
                                 <span
                                   className={`devices-msg ${
