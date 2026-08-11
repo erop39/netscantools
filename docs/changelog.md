@@ -7,16 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
-
-- FastAPI backend scaffold: config (`get_settings`), SQLAlchemy session (`get_db` / `SessionLocal`), CORS, `/api/health`
-
 ### Planned
 
-- 0.1.0 — monorepo scaffold, auth, DB models, UI shell + glass sidebar
 - 0.2.0 — Devices CRUD + dashboard
 - 0.3.0 — Windows scanner + Scans + scheduler
 - 0.4.0 — Notifications + Settings + MVP polish
+
+## [0.1.0] — 2026-08-11
+
+### Added
+
+- FastAPI backend scaffold, SQLite models, admin bootstrap
+- JWT cookie auth (login / logout / me)
+- React + Vite + Tailwind frontend shell
+- Glass sidebar UI (qube.li style from ui/ references)
+- Login and protected routing
 
 ## [0.0.1] — 2026-08-11
 
