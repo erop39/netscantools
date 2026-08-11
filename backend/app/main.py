@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import auth as auth_router
 from app.config import get_settings
 from app.db import Base, SessionLocal, engine
 from app import models  # noqa: F401 — register models
@@ -15,6 +16,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(auth_router.router)
 
 
 @app.on_event("startup")

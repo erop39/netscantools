@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
 from app.main import app
+from app.services.auth import ensure_admin_user, ensure_default_settings
 
 
 @pytest.fixture()
@@ -18,6 +19,8 @@ def db_session():
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
+    ensure_admin_user(session)
+    ensure_default_settings(session)
     try:
         yield session
     finally:
