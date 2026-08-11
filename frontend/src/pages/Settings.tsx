@@ -70,6 +70,7 @@ export function Settings() {
   const [scanSubnet, setScanSubnet] = useState("");
   const [scanInterval, setScanInterval] = useState(30);
   const [scanPorts, setScanPorts] = useState("80,443");
+  const [quickPorts, setQuickPorts] = useState("22,80,443,445,3389,8080,8443");
   const [uiBackground, setUiBackground] = useState<UiBackground>("default");
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>("/bg.jpg");
   const [hasCustom, setHasCustom] = useState(false);
@@ -93,6 +94,7 @@ export function Settings() {
         setScanSubnet(s.scan_subnet);
         setScanInterval(s.scan_interval_minutes);
         setScanPorts(s.scan_ports);
+        setQuickPorts(s.quick_ports);
         setUiBackground(s.ui_background);
         setBackgroundUrl(s.ui_background_url);
         setHasCustom(s.has_custom_background);
@@ -167,6 +169,7 @@ export function Settings() {
       setScanSubnet(s.scan_subnet);
       setScanInterval(s.scan_interval_minutes);
       setScanPorts(s.scan_ports);
+      setQuickPorts(s.quick_ports);
       applyLocal(s.ui_background, s.ui_background_url);
       setSuccess("Custom background uploaded");
     } catch (err) {
@@ -223,12 +226,14 @@ export function Settings() {
           scan_subnet: scanSubnet.trim(),
           scan_interval_minutes: Number(scanInterval),
           scan_ports: scanPorts.trim(),
+          quick_ports: quickPorts.trim(),
           ui_background: uiBackground,
         }),
       });
       setScanSubnet(updated.scan_subnet);
       setScanInterval(updated.scan_interval_minutes);
       setScanPorts(updated.scan_ports);
+      setQuickPorts(updated.quick_ports);
       applyLocal(updated.ui_background, updated.ui_background_url);
       setSuccess("Settings saved");
     } catch (err) {
@@ -376,6 +381,41 @@ export function Settings() {
           </GlassCard>
 
           <form onSubmit={onSubmit} className="flex flex-col gap-5">
+          <GlassCard className="!p-6">
+            <h2 className="mb-1 text-sm font-semibold text-white/95">Port scanning</h2>
+            <p className="mb-4 text-xs text-white/50">
+              Quick ports run after each network scan; full ports are used for manual deep scans.
+            </p>
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-sm text-white/85">
+                Quick ports
+                <input
+                  type="text"
+                  value={quickPorts}
+                  onChange={(e) => setQuickPorts(e.target.value)}
+                  placeholder="22,80,443,445,3389,8080,8443"
+                  spellCheck={false}
+                  className={`${fieldClassName} font-mono`}
+                  aria-label="Quick ports"
+                />
+                <span className="text-xs text-white/40">After each scan (light probe)</span>
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/85">
+                Full ports
+                <input
+                  type="text"
+                  value={scanPorts}
+                  onChange={(e) => setScanPorts(e.target.value)}
+                  placeholder="80,443,8080"
+                  spellCheck={false}
+                  className={`${fieldClassName} font-mono`}
+                  aria-label="Full ports"
+                />
+                <span className="text-xs text-white/40">Manual deep scan only</span>
+              </label>
+            </div>
+          </GlassCard>
+
           <GlassCard className="!p-6">
             <h2 className="mb-1 text-sm font-semibold text-white/95">Appearance</h2>
             <p className="mb-4 text-xs text-white/50">

@@ -59,12 +59,13 @@ export function Scans() {
   const [scanSubnet, setScanSubnet] = useState("192.168.1.0/24");
   const [scanInterval, setScanInterval] = useState(0);
   const [scanPorts, setScanPorts] = useState("80,443,8080");
+  const [quickPorts, setQuickPorts] = useState("22,80,443,445,3389,8080,8443");
   const [uiBackground, setUiBackground] = useState<Settings["ui_background"]>("default");
   const [savedFingerprint, setSavedFingerprint] = useState("");
 
   const pollRef = useRef<number | null>(null);
 
-  const fingerprint = `${scanSubnet.trim()}|${scanInterval}|${scanPorts.trim()}`;
+  const fingerprint = `${scanSubnet.trim()}|${scanInterval}|${scanPorts.trim()}|${quickPorts.trim()}`;
   const dirty = fingerprint !== savedFingerprint && savedFingerprint !== "";
 
   const loadScans = useCallback(async (silent = false) => {
@@ -93,9 +94,10 @@ export function Scans() {
       setScanSubnet(s.scan_subnet);
       setScanInterval(s.scan_interval_minutes);
       setScanPorts(s.scan_ports);
+      setQuickPorts(s.quick_ports);
       setUiBackground(s.ui_background);
       setSavedFingerprint(
-        `${s.scan_subnet.trim()}|${s.scan_interval_minutes}|${s.scan_ports.trim()}`,
+        `${s.scan_subnet.trim()}|${s.scan_interval_minutes}|${s.scan_ports.trim()}|${s.quick_ports.trim()}`,
       );
     } catch (err) {
       setError(parseApiError(err, "Failed to load scan settings"));
@@ -152,15 +154,17 @@ export function Scans() {
           scan_subnet: scanSubnet.trim(),
           scan_interval_minutes: Number(scanInterval),
           scan_ports: scanPorts.trim(),
+          quick_ports: quickPorts.trim(),
           ui_background: uiBackground,
         }),
       });
       setScanSubnet(updated.scan_subnet);
       setScanInterval(updated.scan_interval_minutes);
       setScanPorts(updated.scan_ports);
+      setQuickPorts(updated.quick_ports);
       setUiBackground(updated.ui_background);
       setSavedFingerprint(
-        `${updated.scan_subnet.trim()}|${updated.scan_interval_minutes}|${updated.scan_ports.trim()}`,
+        `${updated.scan_subnet.trim()}|${updated.scan_interval_minutes}|${updated.scan_ports.trim()}|${updated.quick_ports.trim()}`,
       );
       if (!silent) showToast("Scan settings saved");
       return true;
@@ -318,9 +322,25 @@ export function Scans() {
                   <span className="text-xs text-white/40">0 = only manual scans</span>
                 </label>
 
-                <label className="flex flex-col gap-1.5 lg:col-span-4">
+                <label className="flex flex-col gap-1.5 lg:col-span-2">
                   <span className="text-xs font-medium uppercase tracking-wide text-white/45">
-                    Web ports
+                    Quick ports
+                  </span>
+                  <input
+                    type="text"
+                    value={quickPorts}
+                    onChange={(e) => setQuickPorts(e.target.value)}
+                    placeholder="22,80,443,445,3389,8080,8443"
+                    spellCheck={false}
+                    className={`${fieldClassName} font-mono`}
+                    aria-label="Quick ports"
+                  />
+                  <span className="text-xs text-white/40">After each scan</span>
+                </label>
+
+                <label className="flex flex-col gap-1.5 lg:col-span-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">
+                    Full ports
                   </span>
                   <input
                     type="text"
@@ -329,9 +349,9 @@ export function Scans() {
                     placeholder="80,443,8080"
                     spellCheck={false}
                     className={`${fieldClassName} font-mono`}
-                    aria-label="Scan ports"
+                    aria-label="Full ports"
                   />
-                  <span className="text-xs text-white/40">Comma-separated, for web UI hints</span>
+                  <span className="text-xs text-white/40">Manual deep scan</span>
                 </label>
               </div>
 
