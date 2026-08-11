@@ -10,7 +10,10 @@ import {
   PageHeader,
   StatusBadge,
 } from "../components/ui";
-import type { Device } from "../types";
+import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
+import type { Device, PingResult, ResolveResult } from "../types";
+
+type ActionState = { kind: "ping" | "resolve"; text: string; ok?: boolean };
 
 export function Devices() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -19,46 +22,102 @@ export function Devices() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [actionMsg, setActionMsg] = useState<Record<number, ActionState>>({});
+
+  async function loadDevices() {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (status) params.set("status", status);
+      if (query.trim()) params.set("q", query.trim());
+      const qs = params.toString();
+      const list = await apiFetch<Device[]>(`/api/devices${qs ? `?${qs}` : ""}`);
+      setDevices(list);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? `Failed to load devices (${err.status})`
+          : "Failed to load devices",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams();
-        if (status) params.set("status", status);
-        if (query.trim()) params.set("q", query.trim());
-        const qs = params.toString();
-        const list = await apiFetch<Device[]>(`/api/devices${qs ? `?${qs}` : ""}`);
-        if (!cancelled) setDevices(list);
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof ApiError
-              ? `Failed to load devices (${err.status})`
-              : "Failed to load devices",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void loadDevices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, query]);
 
-  function openUrl(url: string | null) {
-    if (!url) return;
-    window.open(url, "_blank", "noopener,noreferrer");
+  async function onPing(d: Device) {
+    if (!d.ip) return;
+    setBusyId(d.id);
+    try {
+      const r = await apiFetch<PingResult>(`/api/devices/${d.id}/ping`, { method: "POST" });
+      setActionMsg((m) => ({
+        ...m,
+        [d.id]: { kind: "ping", text: r.message, ok: r.ok },
+      }));
+      setDevices((list) =>
+        list.map((x) =>
+          x.id === d.id
+            ? { ...x, status: r.ok ? "online" : "offline" }
+            : x,
+        ),
+      );
+    } catch (err) {
+      setActionMsg((m) => ({
+        ...m,
+        [d.id]: {
+          kind: "ping",
+          text: err instanceof ApiError ? `Ping failed (${err.status})` : "Ping failed",
+          ok: false,
+        },
+      }));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onResolve(d: Device) {
+    if (!d.ip) return;
+    setBusyId(d.id);
+    try {
+      const r = await apiFetch<ResolveResult>(`/api/devices/${d.id}/resolve`, {
+        method: "POST",
+      });
+      setActionMsg((m) => ({
+        ...m,
+        [d.id]: {
+          kind: "resolve",
+          text: r.hostname ? `→ ${r.hostname}` : "No PTR record",
+          ok: Boolean(r.hostname),
+        },
+      }));
+      if (r.device) {
+        setDevices((list) => list.map((x) => (x.id === d.id ? r.device : x)));
+      }
+    } catch (err) {
+      setActionMsg((m) => ({
+        ...m,
+        [d.id]: {
+          kind: "resolve",
+          text: err instanceof ApiError ? `Resolve failed (${err.status})` : "Resolve failed",
+          ok: false,
+        },
+      }));
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
     <div>
       <PageHeader
         title="Devices"
-        description="Discovered network equipment"
+        description="Discovered network equipment — open web UI, ping, resolve hostname"
         actions={
           <form
             className="flex flex-wrap items-center gap-2"
@@ -112,54 +171,114 @@ export function Devices() {
                 <th className="px-4 py-3 font-medium">MAC</th>
                 <th className="px-4 py-3 font-medium">Hostname</th>
                 <th className="px-4 py-3 font-medium">Vendor</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">Web UI</th>
+                <th className="px-4 py-3 font-medium">Open</th>
+                <th className="px-4 py-3 font-medium">Tools</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
             <tbody className="divide-y divide-white/8">
-              {devices.map((d) => (
-                <tr key={d.id} className="hover:bg-white/[0.03]">
-                  <td className="px-4 py-3">
-                    <StatusBadge status={d.status} />
-                  </td>
-                  <td className="px-4 py-3 font-mono text-white/90">{d.ip ?? "—"}</td>
-                  <td className="px-4 py-3 font-mono text-white/70">{d.mac}</td>
-                  <td className="px-4 py-3 text-white/85">{d.hostname ?? "—"}</td>
-                  <td className="px-4 py-3 text-white/70">{d.vendor ?? "—"}</td>
-                  <td className="px-4 py-3 text-white/70">{d.type ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      <button
-                        type="button"
-                        disabled={!d.web_ui_local}
-                        onClick={() => openUrl(d.web_ui_local)}
-                        className={btnSecondaryClassName}
-                        title={d.web_ui_local ?? "No LAN URL"}
+              {devices.map((d) => {
+                const http = httpUrlForIp(d.ip);
+                const https = httpsUrlForIp(d.ip);
+                const msg = actionMsg[d.id];
+                const busy = busyId === d.id;
+                return (
+                  <tr key={d.id} className="hover:bg-white/[0.03]">
+                    <td className="px-4 py-3">
+                      <StatusBadge status={d.status} />
+                    </td>
+                    <td className="px-4 py-3 font-mono text-white/90">{d.ip ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono text-white/70">{d.mac}</td>
+                    <td className="px-4 py-3 text-white/85">{d.hostname ?? "—"}</td>
+                    <td className="px-4 py-3 text-white/70">{d.vendor ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          disabled={!d.web_ui_local}
+                          onClick={() => openExternal(d.web_ui_local)}
+                          className={btnSecondaryClassName}
+                          title={d.web_ui_local ?? "No LAN URL"}
+                        >
+                          LAN
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!d.web_ui_external}
+                          onClick={() => openExternal(d.web_ui_external)}
+                          className={btnSecondaryClassName}
+                          title={d.web_ui_external ?? "No external URL"}
+                        >
+                          Ext
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!http}
+                          onClick={() => openExternal(http)}
+                          className={btnSecondaryClassName}
+                          title={http ?? "No IP"}
+                        >
+                          HTTP
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!https}
+                          onClick={() => openExternal(https)}
+                          className={btnSecondaryClassName}
+                          title={https ?? "No IP"}
+                        >
+                          HTTPS
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            disabled={!d.ip || busy}
+                            onClick={() => void onPing(d)}
+                            className={btnSecondaryClassName}
+                            title="ICMP ping"
+                          >
+                            {busy ? "…" : "Ping"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!d.ip || busy}
+                            onClick={() => void onResolve(d)}
+                            className={btnSecondaryClassName}
+                            title="Reverse DNS (PTR)"
+                          >
+                            Resolve
+                          </button>
+                        </div>
+                        {msg && (
+                          <span
+                            className={`text-[11px] ${
+                              msg.ok === false
+                                ? "text-red-200/90"
+                                : msg.ok
+                                  ? "text-emerald-200/90"
+                                  : "text-white/50"
+                            }`}
+                          >
+                            {msg.text}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        to={`/devices/${d.id}`}
+                        className="text-sky-300/90 hover:text-sky-200"
                       >
-                        LAN
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!d.web_ui_external}
-                        onClick={() => openUrl(d.web_ui_external)}
-                        className={btnSecondaryClassName}
-                        title={d.web_ui_external ?? "No external URL"}
-                      >
-                        Ext
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      to={`/devices/${d.id}`}
-                      className="text-sky-300/90 hover:text-sky-200"
-                    >
-                      Details
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+                        Details
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.device import Device
 from app.models.notification import Notification
+from app.services.nettools import default_web_ui_local
 from app.services.oui import lookup_vendor
 
 
@@ -50,6 +51,8 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
                 last_seen=now,
                 first_seen=now,
                 updated_at=now,
+                # Default openable LAN link for discovered gear
+                web_ui_local=default_web_ui_local(host.ip),
             )
             db.add(device)
             db.flush()
@@ -78,6 +81,9 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
                 device.hostname = host.hostname
             if vendor and not device.vendor:
                 device.vendor = vendor
+            # Keep a usable open link if user never set one
+            if not device.web_ui_local and host.ip:
+                device.web_ui_local = default_web_ui_local(host.ip)
 
     online_devices = db.query(Device).filter(Device.status == "online").all()
     for device in online_devices:

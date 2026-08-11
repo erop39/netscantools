@@ -26,6 +26,18 @@ export interface DeviceUpdate {
   web_ui_external?: string | null;
 }
 
+export interface PingResult {
+  ok: boolean;
+  ip: string;
+  rtt_ms: number | null;
+  message: string;
+}
+
+export interface ResolveResult {
+  hostname: string | null;
+  device: Device;
+}
+
 export interface LastScan {
   id: number;
   status: string;

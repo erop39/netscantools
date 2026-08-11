@@ -5,7 +5,6 @@ from __future__ import annotations
 import ipaddress
 import re
 import subprocess
-import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -15,6 +14,8 @@ from sqlalchemy.orm import Session
 from app.models.scan import Scan
 from app.models.setting import Setting
 from app.services.device_diff import HostResult, apply_scan_results
+from app.services.nettools import resolve_hostnames
+from app.services.winconsole import decode_console, run_capture
 
 _ARP_LINE_RE = re.compile(
     r"^\s*(\d{1,3}(?:\.\d{1,3}){3})\s+"
@@ -29,40 +30,9 @@ class ScanAlreadyRunning(Exception):
     """Raised when a scan is already in progress."""
 
 
-def _console_encoding() -> str:
-    """Encoding for Windows console tools (arp/ping).
-
-    Russian Windows emits OEM/cp866, not UTF-8. Using text=True+utf-8
-    yields empty stdout and zero discovered hosts.
-    """
-    if sys.platform == "win32":
-        return "oem"
-    return "utf-8"
-
-
-def _decode_console(data: bytes | None) -> str:
-    if not data:
-        return ""
-    enc = _console_encoding()
-    try:
-        return data.decode(enc)
-    except UnicodeDecodeError:
-        return data.decode(enc, errors="replace")
-
-
-def _run_capture(args: list[str], timeout: float) -> tuple[int, str, str]:
-    """Run a process; return (returncode, stdout, stderr) with console encoding."""
-    result = subprocess.run(
-        args,
-        capture_output=True,
-        timeout=timeout,
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-    )
-    return (
-        result.returncode,
-        _decode_console(result.stdout),
-        _decode_console(result.stderr),
-    )
+# Back-compat aliases for tests / older imports
+_decode_console = decode_console
+_run_capture = run_capture
 
 
 def parse_arp_a(output: str) -> dict[str, str]:
@@ -100,7 +70,7 @@ def ping_host(ip: str) -> bool:
     Prefer TTL marker when present (avoids false OK on some Windows errors).
     """
     try:
-        code, out, _ = _run_capture(["ping", "-n", "1", "-w", "800", ip], timeout=4)
+        code, out, _ = run_capture(["ping", "-n", "1", "-w", "800", ip], timeout=4)
         out_u = out.upper()
         if "TTL=" in out_u:
             return True
@@ -132,7 +102,7 @@ def run_ping_sweep(subnet: str, concurrency: int = 50) -> list[str]:
 
 def get_arp_table() -> str:
     try:
-        _, out, _ = _run_capture(["arp", "-a"], timeout=30)
+        _, out, _ = run_capture(["arp", "-a"], timeout=30)
         return out
     except (subprocess.TimeoutExpired, OSError):
         return ""
@@ -179,6 +149,11 @@ def _build_host_results(
             continue
         found.append(HostResult(mac=mac, ip=ip))
         seen.add(ip)
+
+    # Reverse DNS for discovered hosts
+    names = resolve_hostnames([h.ip for h in found])
+    for h in found:
+        h.hostname = names.get(h.ip)
 
     return found
 

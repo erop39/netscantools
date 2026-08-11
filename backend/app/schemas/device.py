@@ -26,3 +26,15 @@ class DeviceUpdate(BaseModel):
     notes: str | None = None
     web_ui_local: str | None = None
     web_ui_external: str | None = None
+
+
+class PingOut(BaseModel):
+    ok: bool
+    ip: str
+    rtt_ms: float | None = None
+    message: str
+
+
+class ResolveOut(BaseModel):
+    hostname: str | None
+    device: DeviceOut

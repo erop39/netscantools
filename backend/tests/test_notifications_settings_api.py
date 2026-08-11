@@ -98,11 +98,7 @@ def test_put_custom_without_upload_fails(client):
     assert r.status_code == 400
 
 
-def test_upload_and_use_custom_background(client, tmp_path, monkeypatch):
-    import app.services.ui_background as bg_svc
-
-    monkeypatch.setattr(bg_svc, "_data_dir", lambda: tmp_path)
-
+def test_upload_and_use_custom_background(client):
     _login(client)
     # minimal 1x1 PNG
     png = (

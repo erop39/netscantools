@@ -12,6 +12,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.4.5] — 2026-08-11
+
+### Added
+
+- Open device links: LAN / External / HTTP / HTTPS from list and detail
+- Reverse DNS on network scan + **Resolve** action per device
+- **Ping** action with RTT (updates online/offline)
+- New devices get default `web_ui_local` = `http://{ip}`
+
 ## [0.4.4] — 2026-08-11
 
 ### Added

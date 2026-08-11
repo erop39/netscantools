@@ -14,7 +14,8 @@ import {
   PageHeader,
   StatusBadge,
 } from "../components/ui";
-import type { Device } from "../types";
+import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
+import type { Device, PingResult, ResolveResult } from "../types";
 
 export function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,9 @@ export function DeviceDetail() {
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [toolBusy, setToolBusy] = useState(false);
+  const [toolMsg, setToolMsg] = useState<string | null>(null);
+  const [toolOk, setToolOk] = useState<boolean | null>(null);
 
   const [type, setType] = useState("");
   const [notes, setNotes] = useState("");
@@ -119,6 +123,48 @@ export function DeviceDetail() {
     }
   }
 
+  async function onPing() {
+    if (!id || !device?.ip) return;
+    setToolBusy(true);
+    setToolMsg(null);
+    setToolOk(null);
+    try {
+      const r = await apiFetch<PingResult>(`/api/devices/${id}/ping`, { method: "POST" });
+      setToolMsg(r.message);
+      setToolOk(r.ok);
+      setDevice((d) =>
+        d ? { ...d, status: r.ok ? "online" : "offline" } : d,
+      );
+    } catch (err) {
+      setToolMsg(err instanceof ApiError ? `Ping failed (${err.status})` : "Ping failed");
+      setToolOk(false);
+    } finally {
+      setToolBusy(false);
+    }
+  }
+
+  async function onResolve() {
+    if (!id || !device?.ip) return;
+    setToolBusy(true);
+    setToolMsg(null);
+    setToolOk(null);
+    try {
+      const r = await apiFetch<ResolveResult>(`/api/devices/${id}/resolve`, {
+        method: "POST",
+      });
+      setToolMsg(r.hostname ? `Hostname: ${r.hostname}` : "No PTR record for this IP");
+      setToolOk(Boolean(r.hostname));
+      if (r.device) setDevice(r.device);
+    } catch (err) {
+      setToolMsg(
+        err instanceof ApiError ? `Resolve failed (${err.status})` : "Resolve failed",
+      );
+      setToolOk(false);
+    } finally {
+      setToolBusy(false);
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -177,6 +223,75 @@ export function DeviceDetail() {
                 <dd className="mt-0.5 text-white/90">{formatDateTime(device.first_seen)}</dd>
               </div>
             </dl>
+
+            <div className="mt-6 border-t border-white/10 pt-4">
+              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-white/50">
+                Open & tools
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={!device.web_ui_local}
+                  className={btnSecondaryClassName}
+                  onClick={() => openExternal(device.web_ui_local)}
+                >
+                  Open LAN
+                </button>
+                <button
+                  type="button"
+                  disabled={!device.web_ui_external}
+                  className={btnSecondaryClassName}
+                  onClick={() => openExternal(device.web_ui_external)}
+                >
+                  Open Ext
+                </button>
+                <button
+                  type="button"
+                  disabled={!device.ip}
+                  className={btnSecondaryClassName}
+                  onClick={() => openExternal(httpUrlForIp(device.ip))}
+                >
+                  HTTP
+                </button>
+                <button
+                  type="button"
+                  disabled={!device.ip}
+                  className={btnSecondaryClassName}
+                  onClick={() => openExternal(httpsUrlForIp(device.ip))}
+                >
+                  HTTPS
+                </button>
+                <button
+                  type="button"
+                  disabled={!device.ip || toolBusy}
+                  className={btnSecondaryClassName}
+                  onClick={() => void onPing()}
+                >
+                  {toolBusy ? "…" : "Ping"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!device.ip || toolBusy}
+                  className={btnSecondaryClassName}
+                  onClick={() => void onResolve()}
+                >
+                  Resolve name
+                </button>
+              </div>
+              {toolMsg && (
+                <p
+                  className={`mt-2 text-xs ${
+                    toolOk === false
+                      ? "text-red-200"
+                      : toolOk
+                        ? "text-emerald-200"
+                        : "text-white/60"
+                  }`}
+                >
+                  {toolMsg}
+                </p>
+              )}
+            </div>
           </GlassCard>
 
           <GlassCard className="lg:col-span-2">

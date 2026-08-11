@@ -7,6 +7,15 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import app
 from app.services.auth import ensure_admin_user, ensure_default_settings
+import app.services.ui_background as ui_background
+
+
+@pytest.fixture(autouse=True)
+def _isolate_ui_background(tmp_path, monkeypatch):
+    """Keep custom background files out of the real data/ tree during tests."""
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(ui_background, "_data_dir", lambda: ui_dir)
 
 
 @pytest.fixture()
