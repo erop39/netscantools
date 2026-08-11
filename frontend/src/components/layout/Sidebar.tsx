@@ -9,6 +9,7 @@ import {
   IconDevices,
   IconHome,
   IconLogout,
+  IconPlanner,
   IconScans,
   IconSettings,
 } from "../icons";
@@ -23,6 +24,7 @@ const navItems: {
 }[] = [
   { to: "/", label: "Home", end: true, Icon: IconHome },
   { to: "/devices", label: "Devices", Icon: IconDevices },
+  { to: "/planner", label: "Planner", Icon: IconPlanner },
   { to: "/scans", label: "Scans", Icon: IconScans },
   { to: "/notifications", label: "Notifications", Icon: IconBell },
   { to: "/settings", label: "Settings", Icon: IconSettings },

@@ -38,6 +38,17 @@ export function IconDevices(props: IconProps) {
   );
 }
 
+export function IconPlanner(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
 export function IconScans(props: IconProps) {
   return (
     <svg {...base(props)}>

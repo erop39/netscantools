@@ -104,3 +104,45 @@ export interface Settings {
   ui_background_url: string | null;
   has_custom_background: boolean;
 }
+
+export type PlanMatch = "match" | "mismatch" | "linked-no-ip" | "reserve";
+
+export interface PlanPort {
+  id: number;
+  port: number;
+  label: string;
+  sort_order: number;
+}
+
+export interface PlanSlot {
+  id: number;
+  sort_order: number;
+  planned_ip: string | null;
+  hostname_hint: string | null;
+  role_label: string | null;
+  device_mac: string | null;
+  notes: string | null;
+  live_ip: string | null;
+  live_status: string | null;
+  device_id: number | null;
+  match: PlanMatch;
+  ports: PlanPort[];
+}
+
+export interface NetworkPlan {
+  id: number;
+  name: string;
+  cidr: string | null;
+  notes: string | null;
+  updated_at: string | null;
+  slots: PlanSlot[];
+}
+
+export interface PlanCandidate {
+  id: number;
+  mac: string;
+  ip: string | null;
+  name: string | null;
+  hostname: string | null;
+  status: string;
+}
