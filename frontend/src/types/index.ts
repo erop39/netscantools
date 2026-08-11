@@ -71,8 +71,13 @@ export interface Notification {
   created_at: string;
 }
 
+export type UiBackground = "default" | "solid" | "gradient" | "custom";
+
 export interface Settings {
   scan_subnet: string;
   scan_interval_minutes: number;
   scan_ports: string;
+  ui_background: UiBackground;
+  ui_background_url: string | null;
+  has_custom_background: boolean;
 }

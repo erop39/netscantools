@@ -12,6 +12,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
 
+## [0.4.3] — 2026-08-11
+
+### Added
+
+- UI Settings: choose background (Night landscape / Soft gradient / Solid blue / Custom upload)
+- API: `ui_background` in settings, upload/delete custom background image
+
 ## [0.4.2] — 2026-08-11
 
 ### Fixed

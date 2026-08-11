@@ -11,6 +11,8 @@
   --glass-highlight: rgb(255 255 255 / 10%);
   --text: rgb(255 255 255 / 95%);
   --text-muted: rgb(255 255 255 / 62%);
+  /* Scene image — set by BackgroundProvider */
+  --scene-image: url("/bg.jpg");
 }
 
 *,
@@ -34,19 +36,6 @@ body {
     -apple-system,
     sans-serif;
   background-color: var(--bg);
-  /* Atmospheric night scene — image + deep blue fallback */
-  background-image:
-    linear-gradient(
-      180deg,
-      rgb(2 10 24 / 35%) 0%,
-      rgb(4 20 48 / 20%) 40%,
-      rgb(2 12 28 / 45%) 100%
-    ),
-    url("/bg.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -56,14 +45,28 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  background-color: var(--bg);
   background-image:
     radial-gradient(ellipse 80% 50% at 75% 12%, rgb(180 210 255 / 18%), transparent 55%),
     radial-gradient(ellipse 60% 40% at 20% 80%, rgb(20 60 120 / 25%), transparent 60%),
     linear-gradient(180deg, rgb(2 10 24 / 30%) 0%, transparent 35%, rgb(2 12 28 / 40%) 100%),
-    url("/bg.jpg");
+    var(--scene-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+/* Solid — deep blue only */
+html[data-bg="solid"] .app-scene {
+  background-image: linear-gradient(160deg, #041a33 0%, #073e77 55%, #0a4a8a 100%);
+}
+
+/* Soft abstract gradient (no photo) */
+html[data-bg="gradient"] .app-scene {
+  background-image:
+    radial-gradient(ellipse 90% 60% at 80% 10%, rgb(120 180 255 / 35%), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 10% 90%, rgb(40 80 160 / 40%), transparent 50%),
+    linear-gradient(165deg, #021020 0%, #073e77 45%, #0b3d6e 100%);
 }
 
 .app-scene::after {
@@ -73,6 +76,11 @@ body {
   background:
     radial-gradient(circle at 78% 14%, rgb(255 255 240 / 12%) 0%, transparent 8%),
     linear-gradient(180deg, transparent 55%, rgb(2 8 20 / 35%) 100%);
+}
+
+html[data-bg="solid"] .app-scene::after,
+html[data-bg="gradient"] .app-scene::after {
+  background: linear-gradient(180deg, transparent 40%, rgb(2 8 20 / 25%) 100%);
 }
 
 .app-root {
@@ -197,4 +205,40 @@ body {
 
 .nav-item.is-active .nav-icon {
   opacity: 1;
+}
+
+/* Appearance picker cards */
+.bg-option {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 2px solid rgb(255 255 255 / 12%);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+.bg-option:hover {
+  border-color: rgb(255 255 255 / 28%);
+}
+
+.bg-option.is-selected {
+  border-color: rgb(140 190 255 / 65%);
+  box-shadow: 0 0 0 3px rgb(100 160 255 / 22%);
+}
+
+.bg-option-preview {
+  height: 72px;
+  background-size: cover;
+  background-position: center;
+}
+
+.bg-option-label {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: rgb(255 255 255 / 85%);
+  background: rgb(0 0 0 / 25%);
 }

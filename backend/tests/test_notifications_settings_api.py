@@ -13,6 +13,9 @@ def test_get_default_settings(client):
     assert body["scan_subnet"] == "192.168.1.0/24"
     assert body["scan_interval_minutes"] == 0
     assert body["scan_ports"] == "80,443,8080"
+    assert body["ui_background"] == "default"
+    assert body["ui_background_url"] == "/bg.jpg"
+    assert body["has_custom_background"] is False
 
 
 def test_put_settings_valid(client):
@@ -23,6 +26,7 @@ def test_put_settings_valid(client):
             "scan_subnet": "10.0.0.0/24",
             "scan_interval_minutes": 30,
             "scan_ports": "80,443,8443",
+            "ui_background": "solid",
         },
     )
     assert r.status_code == 200
@@ -30,9 +34,12 @@ def test_put_settings_valid(client):
     assert body["scan_subnet"] == "10.0.0.0/24"
     assert body["scan_interval_minutes"] == 30
     assert body["scan_ports"] == "80,443,8443"
+    assert body["ui_background"] == "solid"
+    assert body["ui_background_url"] is None
 
     r2 = client.get("/api/settings")
     assert r2.json()["scan_subnet"] == "10.0.0.0/24"
+    assert r2.json()["ui_background"] == "solid"
 
 
 def test_put_settings_invalid_cidr(client):
@@ -43,6 +50,7 @@ def test_put_settings_invalid_cidr(client):
             "scan_subnet": "not-a-cidr",
             "scan_interval_minutes": 10,
             "scan_ports": "80",
+            "ui_background": "default",
         },
     )
     assert r.status_code == 422
@@ -56,6 +64,7 @@ def test_put_settings_negative_interval(client):
             "scan_subnet": "192.168.1.0/24",
             "scan_interval_minutes": -1,
             "scan_ports": "80",
+            "ui_background": "default",
         },
     )
     assert r.status_code == 422
@@ -69,9 +78,57 @@ def test_put_settings_invalid_ports(client):
             "scan_subnet": "192.168.1.0/24",
             "scan_interval_minutes": 0,
             "scan_ports": "80,abc",
+            "ui_background": "default",
         },
     )
     assert r.status_code == 422
+
+
+def test_put_custom_without_upload_fails(client):
+    _login(client)
+    r = client.put(
+        "/api/settings",
+        json={
+            "scan_subnet": "192.168.1.0/24",
+            "scan_interval_minutes": 0,
+            "scan_ports": "80",
+            "ui_background": "custom",
+        },
+    )
+    assert r.status_code == 400
+
+
+def test_upload_and_use_custom_background(client, tmp_path, monkeypatch):
+    import app.services.ui_background as bg_svc
+
+    monkeypatch.setattr(bg_svc, "_data_dir", lambda: tmp_path)
+
+    _login(client)
+    # minimal 1x1 PNG
+    png = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00"
+        b"\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    r = client.post(
+        "/api/settings/background-image",
+        files={"file": ("bg.png", png, "image/png")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ui_background"] == "custom"
+    assert body["has_custom_background"] is True
+    assert body["ui_background_url"] is not None
+    assert "background-image" in body["ui_background_url"]
+
+    r2 = client.get("/api/settings/background-image")
+    assert r2.status_code == 200
+    assert r2.content[:8] == b"\x89PNG\r\n\x1a\n"
+
+    r3 = client.delete("/api/settings/background-image")
+    assert r3.status_code == 200
+    assert r3.json()["ui_background"] == "default"
+    assert r3.json()["has_custom_background"] is False
 
 
 def test_notifications_list_and_mark_read(client, db_session):
