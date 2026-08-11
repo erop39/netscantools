@@ -4,7 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth as auth_router
 from app.api import dashboard as dashboard_router
 from app.api import devices as devices_router
+from app.api import notifications as notifications_router
 from app.api import scans as scans_router
+from app.api import settings as settings_router
 from app.config import get_settings
 from app.db import Base, SessionLocal, engine
 from app import models  # noqa: F401 — register models
@@ -24,6 +26,8 @@ app.include_router(auth_router.router)
 app.include_router(devices_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(scans_router.router)
+app.include_router(notifications_router.router)
+app.include_router(settings_router.router)
 
 
 @app.on_event("startup")
