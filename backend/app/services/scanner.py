@@ -16,12 +16,15 @@ from app.models.scan import Scan
 from app.models.setting import Setting
 from app.services import nettools as nettools_mod
 from app.services import port_probe as port_probe_mod
+from app.services import latency_history as latency_mod
+from app.services import smb_enum as smb_enum_mod
 from app.services.device_diff import (
     HostResult,
     apply_scan_results,
     normalize_mac,
     update_device_probe_fields,
 )
+from app.services.device_events import log_event
 from app.services.nettools import resolve_hostnames
 from app.services.winconsole import decode_console, run_capture
 
@@ -128,6 +131,8 @@ def _build_host_results(
     alive_ips: set[str],
     arp_map: dict[str, str],
     subnet: str,
+    *,
+    resolve_dns: bool = True,
 ) -> list[HostResult]:
     network = ipaddress.ip_network(subnet, strict=False)
     found: list[HostResult] = []
@@ -161,10 +166,11 @@ def _build_host_results(
         found.append(HostResult(mac=mac, ip=ip))
         seen.add(ip)
 
-    # Reverse DNS for discovered hosts
-    names = resolve_hostnames([h.ip for h in found])
-    for h in found:
-        h.hostname = names.get(h.ip)
+    # Reverse DNS — skip on presence-only quick scan for speed
+    if resolve_dns and found:
+        names = resolve_hostnames([h.ip for h in found])
+        for h in found:
+            h.hostname = names.get(h.ip)
 
     return found
 
@@ -173,11 +179,92 @@ def is_scan_locked() -> bool:
     return _scan_lock.locked()
 
 
-def run_scan_job(db: Session) -> Scan:
-    """Run a full scan: ping sweep → arp → apply_scan_results.
+def _has_open_port(device: Device, port: int) -> bool:
+    ports = device.open_ports if isinstance(device.open_ports, list) else None
+    if not ports:
+        return False
+    for entry in ports:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            if int(entry.get("port")) == port:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+def _auto_scan_smb_shares(db: Session, *, max_hosts: int = 12) -> None:
+    """Best-effort SMB enum for online devices with TCP 445 open."""
+    now = datetime.now(timezone.utc)
+    candidates = (
+        db.query(Device)
+        .filter(Device.status == "online", Device.ip.isnot(None))
+        .all()
+    )
+    done = 0
+    for device in candidates:
+        if done >= max_hosts:
+            break
+        if not _has_open_port(device, 445):
+            continue
+        if not device.ip:
+            continue
+        try:
+            prev = device.smb_shares if isinstance(device.smb_shares, list) else None
+            result = smb_enum_mod.enum_smb_shares(device.ip, timeout_s=5.0)
+            device.smb_scan_status = result.status
+            device.smb_scanned_at = now
+            device.updated_at = now
+            if result.status == "ok":
+                found, gone = smb_enum_mod.diff_share_names(prev, result.shares)
+                device.smb_shares = smb_enum_mod.shares_to_json(result.shares)
+                by_name = {s.name.lower(): s for s in result.shares}
+                for name in sorted(found):
+                    entry = by_name.get(name)
+                    log_event(
+                        db,
+                        device.id,
+                        "share_found",
+                        details={
+                            "name": entry.name if entry else name,
+                            "share_type": entry.share_type if entry else "unknown",
+                            "ip": device.ip,
+                            "auto": True,
+                        },
+                    )
+                for name in sorted(gone):
+                    log_event(
+                        db,
+                        device.id,
+                        "share_gone",
+                        details={"name": name, "ip": device.ip, "auto": True},
+                    )
+            done += 1
+        except Exception:
+            continue
+        try:
+            db.commit()
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+
+
+def run_scan_job(db: Session, *, mode: str = "full") -> Scan:
+    """Run network scan.
+
+    * ``mode="quick"`` — presence only: ping sweep + ARP + online/offline/new/IP.
+      No port probe, no latency, no reverse DNS.
+    * ``mode="full"`` (default) — above + quick_ports TCP probe + latency.
 
     Raises ScanAlreadyRunning if another scan holds the lock or a DB row is running.
     """
+    mode_norm = (mode or "full").strip().lower()
+    if mode_norm not in ("quick", "full"):
+        mode_norm = "full"
+
     if not _scan_lock.acquire(blocking=False):
         raise ScanAlreadyRunning("A scan is already running")
     try:
@@ -188,6 +275,7 @@ def run_scan_job(db: Session) -> Scan:
         subnet = _get_setting_value(db, "scan_subnet", "192.168.1.0/24")
         scan = Scan(
             status="running",
+            mode=mode_norm,
             subnet=subnet,
             devices_found=0,
             new_devices=0,
@@ -198,62 +286,87 @@ def run_scan_job(db: Session) -> Scan:
         scan_id = scan.id
 
         try:
-            alive = set(run_ping_sweep(subnet))
+            # Slightly more aggressive concurrency on quick presence sweeps
+            concurrency = 80 if mode_norm == "quick" else 50
+            alive = set(run_ping_sweep(subnet, concurrency=concurrency))
             arp_map = parse_arp_a(get_arp_table())
-            hosts = _build_host_results(alive, arp_map, subnet)
+            hosts = _build_host_results(
+                alive,
+                arp_map,
+                subnet,
+                resolve_dns=(mode_norm == "full"),
+            )
             diff = apply_scan_results(db, hosts)
 
-            # Phase: quick ports + latency (per-host isolation)
-            quick_csv = _get_setting_value(db, "quick_ports", _DEFAULT_QUICK_PORTS)
-            scanned_ports = port_probe_mod.parse_port_csv(quick_csv)
-            for host in hosts:
-                if not host.ip:
-                    continue
-                try:
-                    mac = normalize_mac(host.mac)
-                except ValueError:
-                    continue
-                try:
-                    device = db.query(Device).filter(Device.mac == mac).first()
-                    if device is None:
+            if mode_norm == "full":
+                # Phase: quick ports + latency (per-host isolation)
+                quick_csv = _get_setting_value(db, "quick_ports", _DEFAULT_QUICK_PORTS)
+                scanned_ports = port_probe_mod.parse_port_csv(quick_csv)
+                for host in hosts:
+                    if not host.ip:
+                        continue
+                    try:
+                        mac = normalize_mac(host.mac)
+                    except ValueError:
+                        continue
+                    try:
+                        device = db.query(Device).filter(Device.mac == mac).first()
+                        if device is None:
+                            continue
+
+                        latency_ms: float | None = None
+                        ports_ok = False
+                        open_now: list[int] = []
+                        try:
+                            open_now = port_probe_mod.probe_host_ports(
+                                host.ip, scanned_ports
+                            )
+                            ports_ok = True
+                        except Exception:
+                            ports_ok = False
+
+                        try:
+                            pr = nettools_mod.ping_detail(
+                                host.ip, count=1, timeout_ms=800
+                            )
+                            if pr.ok and pr.rtt_ms is not None:
+                                latency_ms = float(pr.rtt_ms)
+                        except Exception:
+                            pass
+
+                        merged = None
+                        if ports_ok:
+                            merged = port_probe_mod.merge_open_ports(
+                                device.open_ports
+                                if isinstance(device.open_ports, list)
+                                else None,
+                                scanned_ports,
+                                open_now,
+                                "quick",
+                            )
+
+                        update_device_probe_fields(
+                            db,
+                            device,
+                            latency_ms,
+                            merged,
+                            ports_ok,
+                        )
+                        if latency_ms is not None:
+                            try:
+                                latency_mod.record_latency(
+                                    db, device.id, latency_ms
+                                )
+                            except Exception:
+                                pass
+                    except Exception:
+                        # One host must not abort the scan
                         continue
 
-                    latency_ms: float | None = None
-                    ports_ok = False
-                    open_now: list[int] = []
-                    try:
-                        open_now = port_probe_mod.probe_host_ports(host.ip, scanned_ports)
-                        ports_ok = True
-                    except Exception:
-                        ports_ok = False
-
-                    try:
-                        pr = nettools_mod.ping_detail(host.ip, count=1, timeout_ms=800)
-                        if pr.ok and pr.rtt_ms is not None:
-                            latency_ms = float(pr.rtt_ms)
-                    except Exception:
-                        pass
-
-                    merged = None
-                    if ports_ok:
-                        merged = port_probe_mod.merge_open_ports(
-                            device.open_ports if isinstance(device.open_ports, list) else None,
-                            scanned_ports,
-                            open_now,
-                            "quick",
-                        )
-
-                    update_device_probe_fields(
-                        db,
-                        device,
-                        latency_ms,
-                        merged,
-                        ports_ok,
-                    )
-                except Exception:
-                    # One host must not abort the scan (no session rollback —
-                    # would discard prior hosts' probe updates in this phase).
-                    continue
+                # Optional: SMB share enum when 445 open (opt-in setting)
+                auto_shares = _get_setting_value(db, "share_scan_auto", "0")
+                if auto_shares.strip() in ("1", "true", "yes", "on"):
+                    _auto_scan_smb_shares(db)
 
             # apply_scan_results commits; re-bind scan on this session
             scan = db.query(Scan).filter(Scan.id == scan_id).one()

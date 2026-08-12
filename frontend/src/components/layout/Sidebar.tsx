@@ -9,11 +9,13 @@ import {
   IconDevices,
   IconHome,
   IconHygiene,
+  IconInventory,
   IconLogout,
   IconPlanner,
   IconScans,
   IconSettings,
 } from "../icons";
+import { formatTime, formatTimeZoneLabel, getUserTimeZone } from "../../lib/time";
 
 type IconComp = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
 
@@ -26,6 +28,7 @@ const navItems: {
   { to: "/", label: "Home", end: true, Icon: IconHome },
   { to: "/devices", label: "Devices", Icon: IconDevices },
   { to: "/hygiene", label: "Hygiene", Icon: IconHygiene },
+  { to: "/inventory", label: "Inventory", Icon: IconInventory },
   { to: "/planner", label: "Planner", Icon: IconPlanner },
   { to: "/scans", label: "Scans", Icon: IconScans },
   { to: "/notifications", label: "Notifications", Icon: IconBell },
@@ -41,6 +44,12 @@ export function Sidebar({ collapsed, onToggle }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const [unread, setUnread] = useState(0);
+  const [clock, setClock] = useState(() => new Date());
+
+  useEffect(() => {
+    const t = window.setInterval(() => setClock(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,14 +105,21 @@ export function Sidebar({ collapsed, onToggle }: Props) {
             height={40}
           />
           <div className="sidebar-brand">
-            <div className="sidebar-brand-title">eG::39</div>
+            <div className="sidebar-brand-row">
+              <div className="sidebar-brand-title">eG::39</div>
+              <span
+                className="sidebar-link"
+                title="Link up"
+                aria-label="Link up"
+              />
+            </div>
             <div className="sidebar-brand-sub">netscantools</div>
           </div>
         </header>
       )}
 
       {collapsed && (
-        <div className="sidebar-collapsed-logo" title="eG::39">
+        <div className="sidebar-collapsed-logo" title="eG::39 · link up">
           <img
             className="login-logo sidebar-logo"
             src="/icon.png"
@@ -115,6 +131,8 @@ export function Sidebar({ collapsed, onToggle }: Props) {
       )}
 
       <div className="sidebar-divider" />
+
+      {!collapsed && <div className="sidebar-nav-label">Ops</div>}
 
       <nav className="sidebar-nav">
         {navItems.map((item) => (
@@ -138,17 +156,31 @@ export function Sidebar({ collapsed, onToggle }: Props) {
         ))}
       </nav>
 
-      <div className="sidebar-divider sidebar-divider-bottom" />
+      <div className="sidebar-footer">
+        <div className="sidebar-divider sidebar-divider-bottom" />
 
-      <button
-        type="button"
-        onClick={handleLogout}
-        title="Log out"
-        className={`nav-item sidebar-logout ${collapsed ? "is-icon-only" : ""}`}
-      >
-        <IconLogout size={19} className="nav-icon" />
-        <span className="nav-label">Log out</span>
-      </button>
+        {!collapsed && (
+          <div
+            className="sidebar-clock"
+            title={`${getUserTimeZone()} · PC local time`}
+          >
+            <span className="sidebar-clock-time">
+              {formatTime(clock.toISOString())}
+            </span>
+            <span className="sidebar-clock-tz">{formatTimeZoneLabel(clock)}</span>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          title="Log out"
+          className={`nav-item sidebar-logout ${collapsed ? "is-icon-only" : ""}`}
+        >
+          <IconLogout size={19} className="nav-icon" />
+          <span className="nav-label">Log out</span>
+        </button>
+      </div>
     </aside>
   );
 }

@@ -15,6 +15,11 @@ class SettingsOut(BaseModel):
     # Resolved URL for the scene image (null for solid/gradient)
     ui_background_url: str | None = None
     has_custom_background: bool = False
+    backup_interval_hours: int = 24
+    backup_keep: int = 10
+    backup_last_path: str | None = None
+    backup_count: int = 0
+    share_scan_auto: bool = False
 
 
 class SettingsUpdate(BaseModel):
@@ -23,6 +28,10 @@ class SettingsUpdate(BaseModel):
     scan_ports: str
     quick_ports: str
     ui_background: str = "default"
+    # Optional — omit from scan-page saves so backup settings stay intact
+    backup_interval_hours: int | None = None
+    backup_keep: int | None = None
+    share_scan_auto: bool | None = None
 
     @field_validator("scan_subnet")
     @classmethod
@@ -69,3 +78,21 @@ class SettingsUpdate(BaseModel):
                 f"ui_background must be one of: {', '.join(sorted(UI_BACKGROUND_CHOICES))}"
             )
         return value
+
+    @field_validator("backup_interval_hours")
+    @classmethod
+    def validate_backup_interval(cls, v: int | None) -> int | None:
+        if v is None:
+            return None
+        if v < 0:
+            raise ValueError("backup_interval_hours must be >= 0")
+        return v
+
+    @field_validator("backup_keep")
+    @classmethod
+    def validate_backup_keep(cls, v: int | None) -> int | None:
+        if v is None:
+            return None
+        if v < 1 or v > 100:
+            raise ValueError("backup_keep must be 1–100")
+        return v

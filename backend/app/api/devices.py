@@ -16,11 +16,18 @@ from app.schemas.device import (
     PingOut,
     ResolveAllOut,
     ResolveOut,
+    WolOut,
 )
 from app.services import port_probe as port_probe_mod
 from app.services import scanner as scanner_mod
+from app.services import smb_enum as smb_enum_mod
+from app.services import tls_check as tls_check_mod
+from app.services import wol as wol_mod
 from app.services.device_diff import update_device_probe_fields
+from app.services.device_events import log_event
 from app.services.nettools import ping_detail, resolve_hostname, resolve_hostnames
+from app.schemas.latency import LatencySampleOut
+from app.services import latency_history as latency_mod
 from app.services.scoring import NEW_DEVICE_HOURS, compute_device_score
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
@@ -69,6 +76,7 @@ def _get_device_or_404(db: Session, device_id: int) -> Device:
 @router.get("", response_model=list[DeviceOut])
 def list_devices(
     status_filter: str | None = Query(default=None, alias="status"),
+    location: str | None = Query(default=None),
     q: str | None = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
@@ -76,6 +84,12 @@ def list_devices(
     query = db.query(Device)
     if status_filter:
         query = query.filter(Device.status == status_filter)
+    if location is not None and location.strip() != "":
+        loc = location.strip()
+        if loc.lower() in ("__none__", "(none)", "none"):
+            query = query.filter((Device.location.is_(None)) | (Device.location == ""))
+        else:
+            query = query.filter(Device.location == loc)
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -84,10 +98,27 @@ def list_devices(
             | (Device.hostname.ilike(like))
             | (Device.name.ilike(like))
             | (Device.vendor.ilike(like))
+            | (Device.location.ilike(like))
             | (Device.notes.ilike(like))
         )
     devices = query.order_by(Device.last_seen.desc().nullslast()).all()
     return [to_device_out(d) for d in devices]
+
+
+@router.get("/locations", response_model=list[str])
+def list_locations(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[str]:
+    """Distinct non-empty location labels for filter dropdowns."""
+    rows = (
+        db.query(Device.location)
+        .filter(Device.location.isnot(None), Device.location != "")
+        .distinct()
+        .order_by(Device.location.asc())
+        .all()
+    )
+    return [r[0] for r in rows if r[0]]
 
 
 @router.post("/resolve-all", response_model=ResolveAllOut)
@@ -178,6 +209,17 @@ def list_device_events(
     )
 
 
+@router.get("/{device_id}/latency-history", response_model=list[LatencySampleOut])
+def device_latency_history(
+    device_id: int,
+    limit: int = Query(48, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list:
+    _get_device_or_404(db, device_id)
+    return latency_mod.list_latency(db, device_id, limit=limit)
+
+
 @router.post("/{device_id}/scan-ports", response_model=DeviceOut)
 def scan_device_ports(
     device_id: int,
@@ -231,6 +273,53 @@ def scan_device_ports(
         scanner_mod._scan_lock.release()
 
 
+@router.post("/{device_id}/scan-shares", response_model=DeviceOut)
+def scan_device_shares(
+    device_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> DeviceOut:
+    """Enumerate SMB shares via ``net view \\\\ip /all`` (Windows, read-only)."""
+    device = _get_device_or_404(db, device_id)
+    if not device.ip:
+        raise HTTPException(status_code=400, detail="Device has no IP address")
+
+    now = datetime.now(timezone.utc)
+    prev = device.smb_shares if isinstance(device.smb_shares, list) else None
+    result = smb_enum_mod.enum_smb_shares(device.ip)
+
+    device.smb_scan_status = result.status
+    device.smb_scanned_at = now
+    device.updated_at = now
+
+    if result.status == "ok":
+        found, gone = smb_enum_mod.diff_share_names(prev, result.shares)
+        device.smb_shares = smb_enum_mod.shares_to_json(result.shares)
+        by_name = {s.name.lower(): s for s in result.shares}
+        for name in sorted(found):
+            entry = by_name.get(name)
+            details = {
+                "name": entry.name if entry else name,
+                "share_type": entry.share_type if entry else "unknown",
+                "ip": device.ip,
+                "hidden": entry.hidden if entry else name.endswith("$"),
+                "admin": name in smb_enum_mod.ADMIN_SHARE_NAMES,
+            }
+            log_event(db, device.id, "share_found", details=details)
+        for name in sorted(gone):
+            log_event(
+                db,
+                device.id,
+                "share_gone",
+                details={"name": name, "ip": device.ip},
+            )
+    # On failure keep previous smb_shares; only status + timestamp change
+
+    db.commit()
+    db.refresh(device)
+    return to_device_out(device, with_breakdown=True)
+
+
 @router.post("/{device_id}/ping", response_model=PingOut)
 def ping_device(
     device_id: int,
@@ -248,6 +337,10 @@ def ping_device(
         device.last_seen = now
         if result.rtt_ms is not None:
             device.latency_ms = float(result.rtt_ms)
+            try:
+                latency_mod.record_latency(db, device.id, float(result.rtt_ms), when=now)
+            except Exception:
+                pass
     db.commit()
     return PingOut(
         ok=result.ok,
@@ -255,6 +348,41 @@ def ping_device(
         rtt_ms=result.rtt_ms,
         message=result.message,
     )
+
+
+@router.post("/{device_id}/wol", response_model=WolOut)
+def wake_on_lan(
+    device_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> WolOut:
+    """Send Wake-on-LAN magic packet for this device MAC."""
+    device = _get_device_or_404(db, device_id)
+    result = wol_mod.send_wol(device.mac)
+    return WolOut(ok=result.ok, mac=result.mac, message=result.message)
+
+
+@router.post("/{device_id}/check-tls", response_model=DeviceOut)
+def check_device_tls(
+    device_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> DeviceOut:
+    """Probe HTTPS certificate (web_ui https or IP:443)."""
+    device = _get_device_or_404(db, device_id)
+    now = datetime.now(timezone.utc)
+    probe = tls_check_mod.probe_device_tls(device)
+    device.tls_status = probe.status
+    device.tls_expires_at = probe.expires_at
+    device.tls_issuer = probe.issuer
+    device.tls_error = probe.error
+    device.tls_checked_at = now
+    device.updated_at = now
+    score, _ = compute_device_score(device, now=now)
+    device.security_score = score
+    db.commit()
+    db.refresh(device)
+    return to_device_out(device, with_breakdown=True)
 
 
 @router.post("/{device_id}/resolve", response_model=ResolveOut)

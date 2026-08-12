@@ -11,6 +11,7 @@ import {
   StatCard,
   StatusBadge,
 } from "../components/ui";
+import { eventTone, eventTypeLabel } from "../lib/hygiene";
 import type { Dashboard } from "../types";
 
 export function Home() {
@@ -101,6 +102,60 @@ export function Home() {
             </div>
           </div>
 
+          {((data.people_home?.length ?? 0) > 0 ||
+            (data.people_away?.length ?? 0) > 0) && (
+            <GlassCard>
+              <h2 className="mb-3 text-[15px] font-semibold tracking-tight text-white/95">
+                Who&apos;s home
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-emerald-200/70">
+                    Home ({data.people_home?.length ?? 0})
+                  </p>
+                  <ul className="space-y-1.5">
+                    {(data.people_home ?? []).map((p) => (
+                      <li key={p.id}>
+                        <Link
+                          to={`/devices/${p.id}`}
+                          className="text-sm text-white/90 hover:text-sky-200"
+                        >
+                          {p.name || p.ip || p.mac}
+                        </Link>
+                      </li>
+                    ))}
+                    {(data.people_home?.length ?? 0) === 0 && (
+                      <li className="text-xs text-white/40">Nobody online</li>
+                    )}
+                  </ul>
+                </div>
+                <div>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-white/45">
+                    Away ({data.people_away?.length ?? 0})
+                  </p>
+                  <ul className="space-y-1.5">
+                    {(data.people_away ?? []).map((p) => (
+                      <li key={p.id} className="text-sm text-white/55">
+                        <Link
+                          to={`/devices/${p.id}`}
+                          className="hover:text-sky-200"
+                        >
+                          {p.name || p.ip || p.mac}
+                        </Link>
+                      </li>
+                    ))}
+                    {(data.people_away?.length ?? 0) === 0 && (
+                      <li className="text-xs text-white/40">—</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-white/40">
+                Mark phones as person on device detail.
+              </p>
+            </GlassCard>
+          )}
+
           <GlassCard>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-[15px] font-semibold tracking-tight text-white/95">
@@ -125,8 +180,8 @@ export function Home() {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="rounded bg-white/10 px-2 py-0.5 text-xs capitalize text-white/70">
-                          {n.type.replace(/_/g, " ")}
+                        <span className={`event-type ${eventTone(n.type)}`}>
+                          {eventTypeLabel(n.type)}
                         </span>
                         {!n.read && (
                           <span className="h-1.5 w-1.5 rounded-full bg-sky-400" title="Unread" />

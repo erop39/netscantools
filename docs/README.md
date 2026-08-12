@@ -1,5 +1,7 @@
 # netscantools (eG::39)
 
+**Version:** `0.9.0-beta.1` (first beta)
+
 Личная утилита для сканирования локальной сети, инвентаризации оборудования и быстрого доступа к его web-интерфейсам — из локальной сети и извне.
 
 ## Возможности
@@ -40,7 +42,7 @@
 | `id` | внутренний идентификатор |
 | `ip` | текущий IP-адрес |
 | `mac` | MAC-адрес (стабильный ключ устройства) |
-| `vendor` | производитель по OUI |
+| `vendor` | производитель по OUI (IEEE cache `backend/data/oui.txt`, auto-download on first run) |
 | `hostname` | сетевое имя, если резолвится |
 | `type` | тип оборудования (router, camera, NAS, IoT и т.д., задаётся вручную) |
 | `status` | online / offline / unknown |
@@ -111,7 +113,7 @@ Backend `:8000`, frontend (dev) `:5173`.
 - [x] Devices inventory с web-UI ссылками (LAN / external)
 - [x] Расписание сканирований + уведомления
 - [x] LAN Hygiene: scores, ports/latency, DeviceEvent, Hygiene page + checklist
-- [ ] Inventory journal (расширенный журнал) — post-MVP
+- [x] Inventory journal (расширенный журнал)
 - [ ] Docker-деплой + инструкция по VPN для внешнего доступа
 
 ## Лицензия

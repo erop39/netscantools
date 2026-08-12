@@ -13,6 +13,8 @@ import {
   PageHeader,
   StatusBadge,
 } from "../components/ui";
+import { PortSelector } from "../components/PortSelector";
+import { parseApiDate } from "../lib/time";
 import type { Scan, Settings } from "../types";
 
 const POLL_MS = 2000;
@@ -46,6 +48,34 @@ function parseApiError(err: unknown, fallback: string): string {
   return `${fallback} (${err.status})`;
 }
 
+/** Human duration between start and finish (or now if still running). */
+function formatScanDuration(
+  startedAt: string,
+  finishedAt: string | null,
+  status?: string,
+): string {
+  const start = parseApiDate(startedAt)?.getTime();
+  if (start == null) return "—";
+  let end: number;
+  if (finishedAt) {
+    const e = parseApiDate(finishedAt)?.getTime();
+    if (e == null) return "—";
+    end = e;
+  } else if ((status ?? "").toLowerCase() === "running") {
+    end = Date.now();
+  } else {
+    return "—";
+  }
+  let sec = Math.max(0, Math.round((end - start) / 1000));
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  sec = sec % 60;
+  if (m < 60) return sec > 0 ? `${m}m ${sec}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
+}
+
 export function Scans() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,12 +90,13 @@ export function Scans() {
   const [scanInterval, setScanInterval] = useState(0);
   const [scanPorts, setScanPorts] = useState("80,443,8080");
   const [quickPorts, setQuickPorts] = useState("22,80,443,445,3389,8080,8443");
+  const [shareScanAuto, setShareScanAuto] = useState(false);
   const [uiBackground, setUiBackground] = useState<Settings["ui_background"]>("default");
   const [savedFingerprint, setSavedFingerprint] = useState("");
 
   const pollRef = useRef<number | null>(null);
 
-  const fingerprint = `${scanSubnet.trim()}|${scanInterval}|${scanPorts.trim()}|${quickPorts.trim()}`;
+  const fingerprint = `${scanSubnet.trim()}|${scanInterval}|${scanPorts.trim()}|${quickPorts.trim()}|${shareScanAuto ? 1 : 0}`;
   const dirty = fingerprint !== savedFingerprint && savedFingerprint !== "";
 
   const loadScans = useCallback(async (silent = false) => {
@@ -95,9 +126,10 @@ export function Scans() {
       setScanInterval(s.scan_interval_minutes);
       setScanPorts(s.scan_ports);
       setQuickPorts(s.quick_ports);
+      setShareScanAuto(Boolean(s.share_scan_auto));
       setUiBackground(s.ui_background);
       setSavedFingerprint(
-        `${s.scan_subnet.trim()}|${s.scan_interval_minutes}|${s.scan_ports.trim()}|${s.quick_ports.trim()}`,
+        `${s.scan_subnet.trim()}|${s.scan_interval_minutes}|${s.scan_ports.trim()}|${s.quick_ports.trim()}|${s.share_scan_auto ? 1 : 0}`,
       );
     } catch (err) {
       setError(parseApiError(err, "Failed to load scan settings"));
@@ -156,15 +188,17 @@ export function Scans() {
           scan_ports: scanPorts.trim(),
           quick_ports: quickPorts.trim(),
           ui_background: uiBackground,
+          share_scan_auto: shareScanAuto,
         }),
       });
       setScanSubnet(updated.scan_subnet);
       setScanInterval(updated.scan_interval_minutes);
       setScanPorts(updated.scan_ports);
       setQuickPorts(updated.quick_ports);
+      setShareScanAuto(Boolean(updated.share_scan_auto));
       setUiBackground(updated.ui_background);
       setSavedFingerprint(
-        `${updated.scan_subnet.trim()}|${updated.scan_interval_minutes}|${updated.scan_ports.trim()}|${updated.quick_ports.trim()}`,
+        `${updated.scan_subnet.trim()}|${updated.scan_interval_minutes}|${updated.scan_ports.trim()}|${updated.quick_ports.trim()}|${updated.share_scan_auto ? 1 : 0}`,
       );
       if (!silent) showToast("Scan settings saved");
       return true;
@@ -176,7 +210,7 @@ export function Scans() {
     }
   }
 
-  async function startScan() {
+  async function startScan(mode: "quick" | "full" = "full") {
     setStarting(true);
     setError(null);
     try {
@@ -184,8 +218,15 @@ export function Scans() {
       const ok = await saveSettings(true);
       if (!ok) return;
 
-      await apiFetch<Scan>("/api/scans", { method: "POST" });
-      showToast(`Scan started on ${scanSubnet.trim()}`);
+      await apiFetch<Scan>("/api/scans", {
+        method: "POST",
+        body: JSON.stringify({ mode }),
+      });
+      showToast(
+        mode === "quick"
+          ? `Quick scan started on ${scanSubnet.trim()} (presence only)`
+          : `Full scan started on ${scanSubnet.trim()}`,
+      );
       await loadScans(true);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
@@ -322,36 +363,34 @@ export function Scans() {
                   <span className="text-xs text-white/40">0 = only manual scans</span>
                 </label>
 
-                <label className="flex flex-col gap-1.5 lg:col-span-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">
-                    Quick ports
-                  </span>
-                  <input
-                    type="text"
+                <div className="sm:col-span-2 lg:col-span-6">
+                  <PortSelector
+                    label="Quick ports (after full network scan)"
+                    hint="TCP probe list after Full scan — not used by Quick presence scan"
                     value={quickPorts}
-                    onChange={(e) => setQuickPorts(e.target.value)}
-                    placeholder="22,80,443,445,3389,8080,8443"
-                    spellCheck={false}
-                    className={`${fieldClassName} font-mono`}
-                    aria-label="Quick ports"
+                    onChange={setQuickPorts}
                   />
-                  <span className="text-xs text-white/40">After each scan</span>
-                </label>
+                </div>
 
-                <label className="flex flex-col gap-1.5 lg:col-span-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">
-                    Full ports
-                  </span>
-                  <input
-                    type="text"
+                <div className="sm:col-span-2 lg:col-span-6">
+                  <PortSelector
+                    label="Full ports (manual deep scan / Hygiene)"
+                    hint="Used by per-device Scan ports and Hygiene bulk scan"
                     value={scanPorts}
-                    onChange={(e) => setScanPorts(e.target.value)}
-                    placeholder="80,443,8080"
-                    spellCheck={false}
-                    className={`${fieldClassName} font-mono`}
-                    aria-label="Full ports"
+                    onChange={setScanPorts}
                   />
-                  <span className="text-xs text-white/40">Manual deep scan</span>
+                </div>
+
+                <label className="flex cursor-pointer items-center gap-2 sm:col-span-2 lg:col-span-12">
+                  <input
+                    type="checkbox"
+                    checked={shareScanAuto}
+                    onChange={(e) => setShareScanAuto(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/25 bg-white/5 text-sky-500"
+                  />
+                  <span className="text-sm text-white/80">
+                    Auto SMB share enum after full scan when port 445 is open
+                  </span>
                 </label>
               </div>
 
@@ -374,7 +413,22 @@ export function Scans() {
                         </>
                       )}
                       <span className="mx-1.5 text-white/30">·</span>
+                      <span className="text-sky-200/80 capitalize">
+                        {lastScan.mode === "quick" ? "quick" : "full"}
+                      </span>
+                      <span className="mx-1.5 text-white/30">·</span>
                       <span className="text-white/50">{formatDateTime(lastScan.started_at)}</span>
+                      <span className="mx-1.5 text-white/30">·</span>
+                      <span
+                        className="font-mono text-white/70 tabular-nums"
+                        title="Scan duration"
+                      >
+                        {formatScanDuration(
+                          lastScan.started_at,
+                          lastScan.finished_at,
+                          lastScan.status,
+                        )}
+                      </span>
                     </p>
                   ) : (
                     <p className="text-white/45">No scans yet — pick a subnet and start.</p>
@@ -395,9 +449,10 @@ export function Scans() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => void startScan()}
+                    onClick={() => void startScan("quick")}
                     disabled={starting || hasRunning || settingsLoading}
-                    className={`${btnPrimaryClassName} min-w-[140px] gap-2 bg-gradient-to-b from-sky-400/25 to-sky-500/10 ring-1 ring-sky-300/25 hover:from-sky-400/35`}
+                    title="Ping + ARP only — who is online / offline (no ports)"
+                    className={`${btnPrimaryClassName} min-w-[120px] gap-2 bg-gradient-to-b from-sky-400/25 to-sky-500/10 ring-1 ring-sky-300/25 hover:from-sky-400/35`}
                   >
                     {starting || hasRunning ? (
                       <>
@@ -405,22 +460,17 @@ export function Scans() {
                         Scanning…
                       </>
                     ) : (
-                      <>
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          aria-hidden
-                        >
-                          <circle cx="11" cy="11" r="7" />
-                          <path d="m20 20-3.2-3.2" />
-                        </svg>
-                        Start scan
-                      </>
+                      "Quick scan"
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void startScan("full")}
+                    disabled={starting || hasRunning || settingsLoading}
+                    title="Presence + open ports (quick_ports) + latency"
+                    className={`${btnSecondaryClassName} min-w-[110px]`}
+                  >
+                    Full scan
                   </button>
                 </div>
               </div>
@@ -456,8 +506,10 @@ export function Scans() {
                 <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-white/50">
                   <tr>
                     <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Mode</th>
                     <th className="px-4 py-3 font-medium">Started</th>
                     <th className="px-4 py-3 font-medium">Finished</th>
+                    <th className="px-4 py-3 font-medium">Duration</th>
                     <th className="px-4 py-3 font-medium">Subnet</th>
                     <th className="px-4 py-3 font-medium">Found</th>
                     <th className="px-4 py-3 font-medium">New</th>
@@ -470,11 +522,37 @@ export function Scans() {
                       <td className="px-4 py-3">
                         <StatusBadge status={s.status} />
                       </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={
+                            s.mode === "quick"
+                              ? "rounded bg-sky-500/15 px-2 py-0.5 text-[11px] font-medium text-sky-200/90"
+                              : "rounded bg-white/8 px-2 py-0.5 text-[11px] font-medium text-white/65"
+                          }
+                          title={
+                            s.mode === "quick"
+                              ? "Presence only (ping + ARP)"
+                              : "Full: ports + latency"
+                          }
+                        >
+                          {s.mode === "quick" ? "quick" : "full"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-white/85">
                         {formatDateTime(s.started_at)}
                       </td>
                       <td className="px-4 py-3 text-white/70">
                         {formatDateTime(s.finished_at)}
+                      </td>
+                      <td
+                        className="px-4 py-3 font-mono tabular-nums text-white/80"
+                        title={
+                          s.status === "running"
+                            ? "Elapsed (still running)"
+                            : "Time spent"
+                        }
+                      >
+                        {formatScanDuration(s.started_at, s.finished_at, s.status)}
                       </td>
                       <td className="px-4 py-3 font-mono text-white/80">{s.subnet}</td>
                       <td className="px-4 py-3 text-white/85">{s.devices_found}</td>

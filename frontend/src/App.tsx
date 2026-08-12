@@ -5,6 +5,7 @@ import { DeviceDetail } from "./pages/DeviceDetail";
 import { Devices } from "./pages/Devices";
 import { Home } from "./pages/Home";
 import { Hygiene } from "./pages/Hygiene";
+import { Inventory } from "./pages/Inventory";
 import { Login } from "./pages/Login";
 import { Notifications } from "./pages/Notifications";
 import { Planner } from "./pages/Planner";
@@ -28,6 +29,7 @@ export default function App() {
               <Route path="devices" element={<Devices />} />
               <Route path="devices/:id" element={<DeviceDetail />} />
               <Route path="hygiene" element={<Hygiene />} />
+              <Route path="inventory" element={<Inventory />} />
               <Route path="planner" element={<Planner />} />
               <Route path="scans" element={<Scans />} />
               <Route path="notifications" element={<Notifications />} />

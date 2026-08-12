@@ -19,6 +19,11 @@ DEFAULT_SETTINGS = {
     "quick_ports": "22,80,443,445,3389,8080,8443",
     # UI appearance: default | solid | gradient | custom
     "ui_background": "default",
+    # Inventory backup: hours between copies (0 = off), keep last N files
+    "backup_interval_hours": "24",
+    "backup_keep": "10",
+    # After full scan, enum SMB shares when TCP 445 is open (0/1)
+    "share_scan_auto": "0",
 }
 
 

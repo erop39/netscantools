@@ -14,6 +14,7 @@ import {
   StatusBadge,
 } from "../components/ui";
 import { IconPicker } from "../components/IconPicker";
+import { QrCode } from "../components/QrCode";
 import { deviceLabel } from "../lib/deviceLabel";
 import {
   DeviceIcon,
@@ -23,9 +24,22 @@ import {
   typeFromIcon,
   type DeviceIconKey,
 } from "../lib/deviceIcons";
-import { hasRiskyOpenPort, RISKY_PORTS, scoreClass } from "../lib/hygiene";
+import {
+  eventPort,
+  eventTone,
+  eventTypeLabel,
+  hasRiskyOpenPort,
+  RISKY_PORTS,
+  scoreClass,
+} from "../lib/hygiene";
 import { httpUrlForIp, httpsUrlForIp, openExternal } from "../lib/links";
-import type { Device, DeviceEvent, PingResult, ResolveResult } from "../types";
+import type {
+  Device,
+  DeviceEvent,
+  LatencySample,
+  PingResult,
+  ResolveResult,
+} from "../types";
 
 function ToolIconBtn({
   label,
@@ -80,11 +94,14 @@ export function DeviceDetail() {
   const [showAllIcons, setShowAllIcons] = useState(false);
 
   const [name, setName] = useState("");
+  const [location, setLocation] = useState("");
+  const [isPerson, setIsPerson] = useState(false);
   const [type, setType] = useState("");
   const [icon, setIcon] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [webUiLocal, setWebUiLocal] = useState("");
   const [webUiExternal, setWebUiExternal] = useState("");
+  const [latencyHistory, setLatencyHistory] = useState<LatencySample[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,14 +114,20 @@ export function DeviceDetail() {
       setLoading(true);
       setError(null);
       try {
-        const [d, ev] = await Promise.all([
+        const [d, ev, lat] = await Promise.all([
           apiFetch<Device>(`/api/devices/${id}`),
           apiFetch<DeviceEvent[]>(`/api/devices/${id}/events`).catch(() => [] as DeviceEvent[]),
+          apiFetch<LatencySample[]>(`/api/devices/${id}/latency-history`).catch(
+            () => [] as LatencySample[],
+          ),
         ]);
         if (cancelled) return;
         setDevice(d);
         setEvents(ev);
+        setLatencyHistory(lat);
         setName(d.name ?? "");
+        setLocation(d.location ?? "");
+        setIsPerson(Boolean(d.is_person));
         setType(d.type ?? "");
         setIcon(d.icon ?? null);
         setNotes(d.notes ?? "");
@@ -140,6 +163,8 @@ export function DeviceDetail() {
         method: "PATCH",
         body: JSON.stringify({
           name: name.trim() || null,
+          location: location.trim() || null,
+          is_person: isPerson,
           type: type.trim() || null,
           icon: icon || null,
           notes: notes.trim() || null,
@@ -149,6 +174,8 @@ export function DeviceDetail() {
       });
       setDevice(updated);
       setName(updated.name ?? "");
+      setLocation(updated.location ?? "");
+      setIsPerson(Boolean(updated.is_person));
       setType(updated.type ?? "");
       setIcon(updated.icon ?? null);
       setNotes(updated.notes ?? "");
@@ -279,17 +306,121 @@ export function DeviceDetail() {
     }
   }
 
+  async function onWol() {
+    if (!id) return;
+    setToolBusy(true);
+    setToolMsg(null);
+    setToolOk(null);
+    try {
+      const r = await apiFetch<{ ok: boolean; mac: string; message: string }>(
+        `/api/devices/${id}/wol`,
+        { method: "POST" },
+      );
+      setToolMsg(r.message);
+      setToolOk(r.ok);
+    } catch (err) {
+      setToolMsg(
+        err instanceof ApiError ? `WoL failed (${err.status})` : "WoL failed",
+      );
+      setToolOk(false);
+    } finally {
+      setToolBusy(false);
+    }
+  }
+
+  async function onCheckTls() {
+    if (!id) return;
+    setToolBusy(true);
+    setToolMsg(null);
+    setToolOk(null);
+    try {
+      const updated = await apiFetch<Device>(`/api/devices/${id}/check-tls`, {
+        method: "POST",
+      });
+      setDevice(updated);
+      const st = updated.tls_status ?? "unknown";
+      setToolMsg(
+        st === "ok"
+          ? `TLS ok${updated.tls_expires_at ? ` · exp ${updated.tls_expires_at}` : ""}`
+          : `TLS ${st}${updated.tls_error ? ` — ${updated.tls_error}` : ""}`,
+      );
+      setToolOk(st === "ok" || st === "self_signed");
+    } catch (err) {
+      setToolMsg(
+        err instanceof ApiError ? `TLS check failed (${err.status})` : "TLS check failed",
+      );
+      setToolOk(false);
+    } finally {
+      setToolBusy(false);
+    }
+  }
+
+  async function onScanShares() {
+    if (!id || !device?.ip) return;
+    setToolBusy(true);
+    setToolMsg(null);
+    setToolOk(null);
+    try {
+      const updated = await apiFetch<Device>(`/api/devices/${id}/scan-shares`, {
+        method: "POST",
+      });
+      setDevice(updated);
+      const n = updated.smb_shares?.length ?? 0;
+      const st = updated.smb_scan_status ?? "unknown";
+      if (st === "ok") {
+        setToolMsg(
+          `SMB shares — ${n} share${n === 1 ? "" : "s"} found`,
+        );
+        setToolOk(true);
+      } else if (st === "denied") {
+        setToolMsg("SMB enum denied (guest/null session blocked)");
+        setToolOk(false);
+      } else if (st === "timeout") {
+        setToolMsg("SMB enum timed out");
+        setToolOk(false);
+      } else if (st === "unreachable") {
+        setToolMsg("SMB path unreachable (no share service?)");
+        setToolOk(false);
+      } else if (st === "skipped") {
+        setToolMsg("SMB enum requires Windows");
+        setToolOk(false);
+      } else {
+        setToolMsg(`SMB enum status: ${st}`);
+        setToolOk(false);
+      }
+      try {
+        const ev = await apiFetch<DeviceEvent[]>(`/api/devices/${id}/events`);
+        setEvents(ev);
+      } catch {
+        /* best-effort */
+      }
+    } catch (err) {
+      setToolMsg(
+        err instanceof ApiError
+          ? `Share scan failed (${err.status})`
+          : "Share scan failed",
+      );
+      setToolOk(false);
+    } finally {
+      setToolBusy(false);
+    }
+  }
+
   function eventDetailsText(ev: DeviceEvent): string | null {
     if (!ev.details || typeof ev.details !== "object") return null;
     const parts: string[] = [];
     const d = ev.details;
-    if (typeof d.port === "number") parts.push(`port ${d.port}`);
+    // Port shown as pill next to type — skip duplicate in details
     if (typeof d.old_ip === "string" || typeof d.new_ip === "string") {
       parts.push(`${String(d.old_ip ?? "—")} → ${String(d.new_ip ?? "—")}`);
     }
     if (typeof d.ip === "string") parts.push(String(d.ip));
+    if (typeof d.name === "string" && typeof d.port !== "number") {
+      parts.push(String(d.name));
+    }
+    if (typeof d.share_type === "string") parts.push(String(d.share_type));
     if (typeof d.message === "string") parts.push(String(d.message));
-    if (parts.length === 0) {
+    if (parts.length === 0 && typeof d.port !== "number") {
       try {
         const s = JSON.stringify(d);
         return s === "{}" ? null : s;
@@ -297,7 +428,7 @@ export function DeviceDetail() {
         return null;
       }
     }
-    return parts.join(" · ");
+    return parts.length ? parts.join(" · ") : null;
   }
 
   function pickPreset(p: (typeof TYPE_PRESETS)[number]) {
@@ -358,7 +489,9 @@ export function DeviceDetail() {
                 <div className="device-detail-title">
                   {deviceLabel(device)}
                   {device.is_new && (
-                    <span className="hygiene-badge hygiene-badge--new ml-2 align-middle">NEW</span>
+                    <span className="devices-new-tag" title="First seen within 24h">
+                      new
+                    </span>
                   )}
                 </div>
                 <div className="device-detail-meta">
@@ -397,12 +530,40 @@ export function DeviceDetail() {
                 </Fact>
                 <Fact label="DNS">{device.hostname ?? "—"}</Fact>
                 <Fact label="Vendor">{device.vendor ?? "—"}</Fact>
+                <Fact label="Location">{device.location ?? "—"}</Fact>
                 <Fact label="Latency">
                   {device.latency_ms != null ? `${Math.round(device.latency_ms)} ms` : "—"}
+                </Fact>
+                <Fact label="TLS">
+                  {device.tls_status ? (
+                    <span
+                      className={
+                        device.tls_status === "ok"
+                          ? "score-good"
+                          : device.tls_status === "expired"
+                            ? "score-bad"
+                            : device.tls_status === "self_signed"
+                              ? "score-warn"
+                              : "score-muted"
+                      }
+                      title={device.tls_error ?? device.tls_issuer ?? undefined}
+                    >
+                      {device.tls_status}
+                      {device.tls_expires_at
+                        ? ` · exp ${formatDateTime(device.tls_expires_at)}`
+                        : ""}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
                 </Fact>
                 <Fact label="Last seen">{formatDateTime(device.last_seen)}</Fact>
                 <Fact label="First seen">{formatDateTime(device.first_seen)}</Fact>
                 <Fact label="Ports scanned">{formatDateTime(device.ports_scanned_at)}</Fact>
+                <Fact label="SMB scanned">{formatDateTime(device.smb_scanned_at)}</Fact>
+                <Fact label="SMB status">
+                  {device.smb_scan_status ?? "—"}
+                </Fact>
               </dl>
             </section>
 
@@ -471,11 +632,22 @@ export function DeviceDetail() {
                         .map((p) => {
                           const risky = RISKY_PORTS.has(p.port);
                           return (
-                            <tr key={`${p.port}-${p.source ?? ""}`} className={risky ? "is-risk" : undefined}>
-                              <td className="devices-mono">
-                                {p.port}
+                            <tr
+                              key={`${p.port}-${p.source ?? ""}`}
+                              className={risky ? "is-risk is-open" : "is-open"}
+                            >
+                              <td>
+                                <span
+                                  className={
+                                    risky ? "port-pill is-risk" : "port-pill"
+                                  }
+                                >
+                                  {p.port}
+                                </span>
                                 {risky && (
-                                  <span className="hygiene-chip hygiene-chip--risk ml-1.5">risk</span>
+                                  <span className="hygiene-chip hygiene-chip--risk ml-1.5">
+                                    risk
+                                  </span>
                                 )}
                               </td>
                               <td>{p.service ?? "—"}</td>
@@ -492,6 +664,82 @@ export function DeviceDetail() {
             </section>
 
             <section className="device-detail-section">
+              <h2 className="device-detail-section-title">SMB shares</h2>
+              {device.smb_shares && device.smb_shares.length > 0 ? (
+                <div className="detail-shares-wrap">
+                  <table className="detail-shares-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Comment</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...device.smb_shares]
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((s) => {
+                          const admin = /^(c|d|e|admin|print)\$$/i.test(s.name);
+                          const rowClass = [
+                            s.share_type === "print" ? "is-print" : "",
+                            admin ? "is-admin" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ");
+                          const unc =
+                            device.ip != null
+                              ? `\\\\${device.ip}\\${s.name}`
+                              : null;
+                          return (
+                            <tr
+                              key={s.name}
+                              className={rowClass || undefined}
+                            >
+                              <td>
+                                <span className="share-name">{s.name}</span>
+                                {(s.hidden || s.name.endsWith("$")) && (
+                                  <span className="share-hidden-tag">hidden</span>
+                                )}
+                                {unc && (
+                                  <div className="share-path" title={unc}>
+                                    {unc}
+                                  </div>
+                                )}
+                              </td>
+                              <td>
+                                <span
+                                  className={`share-type-pill is-${s.share_type}`}
+                                >
+                                  {s.share_type}
+                                </span>
+                              </td>
+                              <td>{s.comment?.trim() ? s.comment : "—"}</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="device-field-hint">
+                  {device.smb_scan_status === "denied"
+                    ? "Enum denied — host blocks guest listing. Status still useful."
+                    : device.smb_scan_status === "unreachable"
+                      ? "Path unreachable — SMB may be closed or firewalled."
+                      : "No shares recorded yet. Run Scan shares (Windows net view)."}
+                </p>
+              )}
+              {device.smb_scanned_at && (
+                <p className="detail-shares-meta">
+                  Last enum {formatDateTime(device.smb_scanned_at)}
+                  {device.smb_scan_status
+                    ? ` · ${device.smb_scan_status}`
+                    : ""}
+                </p>
+              )}
+            </section>
+
+            <section className="device-detail-section">
               <h2 className="device-detail-section-title">Timeline</h2>
               {events.length === 0 ? (
                 <p className="device-field-hint">No events yet.</p>
@@ -499,16 +747,98 @@ export function DeviceDetail() {
                 <ul className="detail-timeline">
                   {events.map((ev) => {
                     const extra = eventDetailsText(ev);
+                    const port = eventPort(ev.details);
+                    const riskyPort = port != null && RISKY_PORTS.has(port);
                     return (
                       <li key={ev.id} className="detail-timeline-item">
-                        <span className="detail-timeline-type">{ev.type.replace(/_/g, " ")}</span>
-                        <span className="detail-timeline-time">{formatDateTime(ev.created_at)}</span>
-                        {extra && <span className="detail-timeline-details">{extra}</span>}
+                        <div className="detail-timeline-head">
+                          <span
+                            className={`event-type ${eventTone(ev.type)}`}
+                          >
+                            {eventTypeLabel(ev.type)}
+                          </span>
+                          {port != null && (
+                            <span
+                              className={
+                                riskyPort ? "port-pill is-risk" : "port-pill"
+                              }
+                              title={riskyPort ? "Risky open port" : "Port"}
+                            >
+                              {port}
+                            </span>
+                          )}
+                        </div>
+                        <span className="detail-timeline-time">
+                          {formatDateTime(ev.created_at)}
+                        </span>
+                        {extra && (
+                          <span className="detail-timeline-details">{extra}</span>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
               )}
+            </section>
+
+            <section className="device-detail-section">
+              <h2 className="device-detail-section-title">Latency history</h2>
+              {latencyHistory.length === 0 ? (
+                <p className="device-field-hint">
+                  No samples yet. Run a Full scan or Ping to record RTT.
+                </p>
+              ) : (
+                <div className="latency-history">
+                  <div className="latency-spark" aria-hidden>
+                    {(() => {
+                      const vals = latencyHistory.map((s) => s.rtt_ms);
+                      const max = Math.max(...vals, 1);
+                      return vals.map((v, i) => (
+                        <span
+                          key={latencyHistory[i].id}
+                          className="latency-bar"
+                          style={{ height: `${Math.max(8, (v / max) * 100)}%` }}
+                          title={`${Math.round(v)} ms`}
+                        />
+                      ));
+                    })()}
+                  </div>
+                  <p className="detail-shares-meta">
+                    {latencyHistory.length} sample
+                    {latencyHistory.length === 1 ? "" : "s"} · last{" "}
+                    {Math.round(latencyHistory[latencyHistory.length - 1].rtt_ms)}{" "}
+                    ms
+                  </p>
+                </div>
+              )}
+            </section>
+
+            <section className="device-detail-section">
+              <h2 className="device-detail-section-title">QR · web UI</h2>
+              {(() => {
+                const url =
+                  device.web_ui_local ||
+                  device.web_ui_external ||
+                  httpUrlForIp(device.ip);
+                if (!url) {
+                  return (
+                    <p className="device-field-hint">
+                      Set a web UI URL or IP to generate a QR code.
+                    </p>
+                  );
+                }
+                return (
+                  <div className="detail-qr-block">
+                    <QrCode value={url} size={148} />
+                    <p className="mt-2 break-all font-mono text-[11px] text-white/55">
+                      {url}
+                    </p>
+                    <p className="device-field-hint mt-1">
+                      Scan with phone to open the panel on LAN/VPN.
+                    </p>
+                  </div>
+                );
+              })()}
             </section>
 
             <section className="device-detail-section">
@@ -594,6 +924,38 @@ export function DeviceDetail() {
                       <circle cx="20" cy="17" r="2" />
                     </svg>
                   </ToolIconBtn>
+                  <ToolIconBtn
+                    label="Scan shares"
+                    title="Enumerate SMB shares (net view, Windows)"
+                    disabled={!device.ip || toolBusy}
+                    onClick={() => void onScanShares()}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M4 6h16v4H4zM4 14h16v4H4z" />
+                      <path d="M8 8h.01M8 16h.01" />
+                    </svg>
+                  </ToolIconBtn>
+                  <ToolIconBtn
+                    label="Wake on LAN"
+                    title="Send WoL magic packet"
+                    disabled={toolBusy}
+                    onClick={() => void onWol()}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M13 2 3 14h8l-1 8 10-12h-8l1-8z" />
+                    </svg>
+                  </ToolIconBtn>
+                  <ToolIconBtn
+                    label="Check TLS"
+                    title="Probe HTTPS certificate"
+                    disabled={toolBusy}
+                    onClick={() => void onCheckTls()}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <rect x="5" y="11" width="14" height="10" rx="2" />
+                      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                    </svg>
+                  </ToolIconBtn>
                 </div>
                 {toolMsg && (
                   <p
@@ -627,6 +989,43 @@ export function DeviceDetail() {
                 <span className="device-field-hint">
                   Manual label — not overwritten by scan or DNS
                 </span>
+              </label>
+
+              <label className="device-field">
+                <span className="device-field-label">Location</span>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Living room, Garage, Rack…"
+                  className={fieldClassName}
+                  list="device-location-hints"
+                />
+                <datalist id="device-location-hints">
+                  <option value="Living room" />
+                  <option value="Bedroom" />
+                  <option value="Kitchen" />
+                  <option value="Office" />
+                  <option value="Garage" />
+                  <option value="Basement" />
+                  <option value="Rack" />
+                </datalist>
+                <span className="device-field-hint">
+                  Room / place — filterable on Devices list
+                </span>
+              </label>
+
+              <label className="device-field device-field--check">
+                <span className="device-field-label">Presence</span>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-white/85">
+                  <input
+                    type="checkbox"
+                    checked={isPerson}
+                    onChange={(e) => setIsPerson(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/25 bg-white/5 text-sky-500"
+                  />
+                  This is a person (phone / wearable) — show in “Who’s home”
+                </label>
               </label>
 
               <div className="device-field">

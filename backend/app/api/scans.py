@@ -5,7 +5,7 @@ from app.api.deps import get_current_user
 from app.db import get_db
 from app.models.scan import Scan
 from app.models.user import User
-from app.schemas.scan import ScanOut
+from app.schemas.scan import ScanOut, ScanStart
 from app.services.scanner import ScanAlreadyRunning, is_scan_locked, run_scan_job
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
@@ -13,9 +13,16 @@ router = APIRouter(prefix="/api/scans", tags=["scans"])
 
 @router.post("", response_model=ScanOut, status_code=status.HTTP_202_ACCEPTED)
 def start_scan(
+    body: ScanStart = ScanStart(),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> Scan:
+    """Start a scan. Body optional: ``{\"mode\": \"quick\"|\"full\"}`` (default full).
+
+    * **quick** — online/offline/new only (ping + ARP), no ports/latency/DNS.
+    * **full** — presence + quick_ports + latency (hygiene enrich).
+    """
+    mode = body.mode or "full"
     if is_scan_locked():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -27,7 +34,7 @@ def start_scan(
             detail="Scan already running",
         )
     try:
-        return run_scan_job(db)
+        return run_scan_job(db, mode=mode)
     except ScanAlreadyRunning as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -49,6 +49,16 @@ export function IconPlanner(props: IconProps) {
   );
 }
 
+export function IconInventory(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 7h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z" />
+      <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M8 12h8M8 16h5" />
+    </svg>
+  );
+}
+
 export function IconHygiene(props: IconProps) {
   return (
     <svg {...base(props)}>

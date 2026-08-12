@@ -9,8 +9,35 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Planned
 
-- Inventory journal (post-MVP)
 - Docker deploy + VPN docs (post-MVP)
+- **HAOS IoT bridge** — pull/remember IoT from Home Assistant (see `docs/todo.md`)
+- multi-VLAN (see `docs/todo.md`)
+
+## [0.9.0-beta.1] — 2026-08-12
+
+First public beta after Hygiene 0.8.0 — home LAN inventory, hygiene, and ops tools.
+
+### Added
+
+- SMB share enum: `POST /api/devices/{id}/scan-shares` (`net view`); shares UI on device detail
+- SMB chips on Devices; opt-in auto enum after full scan when 445 open (`share_scan_auto`)
+- **Location** on devices (field, filter, edit)
+- **Wake-on-LAN** — `POST /api/devices/{id}/wol`
+- **Inventory backup** — scheduled SQLite copies + `POST /api/settings/backup-now`
+- **TLS cert check** — `POST /api/devices/{id}/check-tls`, score penalties
+- **Quick scan** — presence only (`{"mode":"quick"}`); **Full scan** keeps ports + latency
+- Scan history **duration** + scan **mode** column
+- **Time sync** — UTC API timestamps; PC timezone UI; Settings Time card; sidebar clock; `GET /api/time`
+- **Inventory journal** — `/inventory` + CRUD `/api/inventory`
+- **QR web-UI** on device detail
+- **Presence** — `is_person` + Home “Who’s home”
+- **Latency history** (last 48 samples) + sparkline
+- **Port catalog** — well-known TCP list + `PortSelector` on Scans (presets → `quick_ports` / `scan_ports`)
+- OUI vendor auto-fill (IEEE cache + backfill)
+
+### Changed
+
+- Event type colors and open-port pills priority in UI
 
 ## [0.8.0] — 2026-08-12
 

@@ -10,6 +10,7 @@ import {
   LoadingState,
   PageHeader,
 } from "../components/ui";
+import { TimeSyncCard } from "../components/TimeSyncCard";
 import { useBackground } from "../theme/BackgroundProvider";
 import type { Settings as SettingsType, UiBackground } from "../types";
 
@@ -71,6 +72,11 @@ export function Settings() {
   const [scanInterval, setScanInterval] = useState(30);
   const [scanPorts, setScanPorts] = useState("80,443");
   const [quickPorts, setQuickPorts] = useState("22,80,443,445,3389,8080,8443");
+  const [backupInterval, setBackupInterval] = useState(24);
+  const [backupKeep, setBackupKeep] = useState(10);
+  const [backupCount, setBackupCount] = useState(0);
+  const [backupLast, setBackupLast] = useState<string | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
   const [uiBackground, setUiBackground] = useState<UiBackground>("default");
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>("/bg.jpg");
   const [hasCustom, setHasCustom] = useState(false);
@@ -95,6 +101,10 @@ export function Settings() {
         setScanInterval(s.scan_interval_minutes);
         setScanPorts(s.scan_ports);
         setQuickPorts(s.quick_ports);
+        setBackupInterval(s.backup_interval_hours ?? 24);
+        setBackupKeep(s.backup_keep ?? 10);
+        setBackupCount(s.backup_count ?? 0);
+        setBackupLast(s.backup_last_path ?? null);
         setUiBackground(s.ui_background);
         setBackgroundUrl(s.ui_background_url);
         setHasCustom(s.has_custom_background);
@@ -228,18 +238,42 @@ export function Settings() {
           scan_ports: scanPorts.trim(),
           quick_ports: quickPorts.trim(),
           ui_background: uiBackground,
+          backup_interval_hours: Number(backupInterval),
+          backup_keep: Number(backupKeep),
         }),
       });
       setScanSubnet(updated.scan_subnet);
       setScanInterval(updated.scan_interval_minutes);
       setScanPorts(updated.scan_ports);
       setQuickPorts(updated.quick_ports);
+      setBackupInterval(updated.backup_interval_hours ?? 24);
+      setBackupKeep(updated.backup_keep ?? 10);
+      setBackupCount(updated.backup_count ?? 0);
+      setBackupLast(updated.backup_last_path ?? null);
       applyLocal(updated.ui_background, updated.ui_background_url);
       setSuccess("Settings saved");
     } catch (err) {
       setError(parseApiDetail(err, "Save failed"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onBackupNow() {
+    setBackupBusy(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const s = await apiFetch<SettingsType>("/api/settings/backup-now", {
+        method: "POST",
+      });
+      setBackupCount(s.backup_count ?? 0);
+      setBackupLast(s.backup_last_path ?? null);
+      setSuccess("Inventory backup created");
+    } catch (err) {
+      setError(parseApiDetail(err, "Backup failed"));
+    } finally {
+      setBackupBusy(false);
     }
   }
 
@@ -291,7 +325,7 @@ export function Settings() {
     <div className="settings-stack">
       <PageHeader
         title="Settings"
-        description="Account and appearance"
+        description="Account, time, backup and appearance"
       />
 
       {loading && <LoadingState label="Loading settings…" />}
@@ -304,6 +338,70 @@ export function Settings() {
 
       {!loading && (
         <>
+          <GlassCard className="!p-6">
+            <TimeSyncCard />
+          </GlassCard>
+
+          <GlassCard className="!p-6">
+            <h2 className="mb-1 text-sm font-semibold text-white/95">
+              Inventory backup
+            </h2>
+            <p className="mb-4 text-xs text-white/55">
+              Automatic SQLite copy into <code className="text-white/70">data/backups/</code>
+            </p>
+            <div className="mb-4 grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-sm text-white/85">
+                Interval (hours, 0 = off)
+                <input
+                  type="number"
+                  min={0}
+                  max={720}
+                  value={backupInterval}
+                  onChange={(e) => setBackupInterval(Number(e.target.value))}
+                  className={fieldClassName}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/85">
+                Keep last N files
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={backupKeep}
+                  onChange={(e) => setBackupKeep(Number(e.target.value))}
+                  className={fieldClassName}
+                />
+              </label>
+            </div>
+            <p className="mb-3 text-xs text-white/50">
+              {backupCount > 0
+                ? `${backupCount} backup${backupCount === 1 ? "" : "s"} on disk`
+                : "No backups yet"}
+              {backupLast ? ` · latest: ${backupLast.split(/[/\\]/).pop()}` : ""}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={backupBusy}
+                onClick={() => void onBackupNow()}
+                className={btnSecondaryClassName}
+              >
+                {backupBusy ? "Backing up…" : "Backup now"}
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void onSubmit(e as unknown as FormEvent);
+                }}
+                className={btnPrimaryClassName}
+              >
+                {saving ? "Saving…" : "Save backup settings"}
+              </button>
+            </div>
+          </GlassCard>
+
           <GlassCard className="!p-6">
             <h2 className="mb-1 text-sm font-semibold text-white/95">Account</h2>
             <p className="mb-4 text-xs text-white/55">Change your login password</p>

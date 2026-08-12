@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.models.device import Device
 from app.services.device_events import log_event, log_event_and_maybe_notify
 from app.services.nettools import default_web_ui_local
-from app.services.oui import lookup_vendor
+from app.services.oui import backfill_device_vendors, lookup_vendor
 from app.services.scoring import compute_device_score
 
 
@@ -174,9 +174,24 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
             )
             touched.append(device)
 
+    # Backfill OUI for inventory rows still missing vendor (cache may load mid-scan)
+    missing = (
+        db.query(Device)
+        .filter((Device.vendor.is_(None)) | (Device.vendor == ""))
+        .all()
+    )
+    if missing:
+        backfill_device_vendors(missing)
+
     for device in touched:
         score, _ = compute_device_score(device, now=now)
         device.security_score = score
+    # Rescore devices that only received a vendor fill (score uses no_vendor penalty)
+    touched_ids = {d.id for d in touched}
+    for device in missing:
+        if device.id not in touched_ids and device.vendor:
+            score, _ = compute_device_score(device, now=now)
+            device.security_score = score
 
     db.commit()
     return DiffResult(devices_found=len(seen_macs), new_devices=new_count)

@@ -5,14 +5,26 @@ from __future__ import annotations
 import socket
 from typing import Any
 
-# Well-known ports → short service labels (optional enrichment on upsert)
-_SERVICE_MAP: dict[int, str] = {
+from app.services import well_known_ports as wkp
+
+# Fallback if catalog missing
+_FALLBACK_SERVICE_MAP: dict[int, str] = {
     22: "ssh",
     80: "http",
     443: "https",
     445: "smb",
     3389: "rdp",
 }
+
+
+def _service_map() -> dict[int, str]:
+    cat = wkp.service_map()
+    if cat:
+        # catalog overrides + keep common fallbacks
+        merged = dict(_FALLBACK_SERVICE_MAP)
+        merged.update(cat)
+        return merged
+    return dict(_FALLBACK_SERVICE_MAP)
 
 
 def parse_port_csv(s: str) -> list[int]:
@@ -54,7 +66,7 @@ def probe_host_ports(ip: str, ports: list[int], timeout_s: float = 0.35) -> list
 
 
 def _service_for(port: int) -> str | None:
-    return _SERVICE_MAP.get(port)
+    return _service_map().get(port)
 
 
 def merge_open_ports(

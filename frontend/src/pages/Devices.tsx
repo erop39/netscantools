@@ -16,7 +16,7 @@ import { DeviceIconTrigger } from "../components/DeviceIconTrigger";
 import { deviceLabel } from "../lib/deviceLabel";
 import { typeFromIcon, type DeviceIconKey } from "../lib/deviceIcons";
 import { downloadHtmlReport, printPdfReport } from "../lib/exportReport";
-import { hasRiskyOpenPort, scoreClass } from "../lib/hygiene";
+import { hasRiskyOpenPort, RISKY_PORTS, scoreClass } from "../lib/hygiene";
 import { httpUrlForIp, openExternal } from "../lib/links";
 import type {
   Device,
@@ -61,6 +61,8 @@ export function Devices() {
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [locations, setLocations] = useState<string[]>([]);
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -75,10 +77,15 @@ export function Devices() {
     try {
       const params = new URLSearchParams();
       if (status) params.set("status", status);
+      if (locationFilter) params.set("location", locationFilter);
       if (query.trim()) params.set("q", query.trim());
       const qs = params.toString();
-      const list = await apiFetch<Device[]>(`/api/devices${qs ? `?${qs}` : ""}`);
+      const [list, locs] = await Promise.all([
+        apiFetch<Device[]>(`/api/devices${qs ? `?${qs}` : ""}`),
+        apiFetch<string[]>("/api/devices/locations").catch(() => [] as string[]),
+      ]);
       setDevices(list);
+      setLocations(locs);
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -93,7 +100,7 @@ export function Devices() {
   useEffect(() => {
     void loadDevices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, query]);
+  }, [status, locationFilter, query]);
 
   async function onPing(d: Device) {
     if (!d.ip) return;
@@ -325,11 +332,22 @@ export function Devices() {
             { value: "unknown", label: "Unknown" },
           ]}
         />
+        <DarkSelect
+          value={locationFilter}
+          onChange={setLocationFilter}
+          className="dark-dd--compact devices-filter"
+          aria-label="Filter by location"
+          options={[
+            { value: "", label: "All locations" },
+            { value: "__none__", label: "No location" },
+            ...locations.map((loc) => ({ value: loc, label: loc })),
+          ]}
+        />
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search name, IP, MAC, host…"
+          placeholder="Search name, IP, MAC, host, location…"
           className={`${fieldClassName} devices-search`}
           aria-label="Search devices"
         />
@@ -377,6 +395,7 @@ export function Devices() {
                   <th className="col-ip">IP</th>
                   <th className="col-mac">MAC</th>
                   <th className="col-host">Host</th>
+                  <th className="col-ports">Ports</th>
                   <th className="col-actions">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -388,19 +407,17 @@ export function Devices() {
                   const busy = busyId === d.id || bulkBusy;
                   const isRenaming = renamingId === d.id;
                   const openUrl = primaryOpenUrl(d);
-                  const portCount = d.open_ports?.length ?? 0;
-                  const risky = hasRiskyOpenPort(d.open_ports);
+                  const ports = [...(d.open_ports ?? [])].sort(
+                    (a, b) => a.port - b.port,
+                  );
+                  const risky = hasRiskyOpenPort(ports);
+                  const portsCap = 12;
+                  const portsShown = ports.slice(0, portsCap);
+                  const portsExtra = ports.length - portsShown.length;
                   return (
                     <tr key={d.id}>
                       <td className="col-status">
-                        <div className="devices-status-stack">
-                          <StatusBadge status={d.status} />
-                          {d.is_new && (
-                            <span className="hygiene-badge hygiene-badge--new" title="First seen within 24h">
-                              NEW
-                            </span>
-                          )}
-                        </div>
+                        <StatusBadge status={d.status} />
                       </td>
                       <td className="col-device">
                         {isRenaming ? (
@@ -444,11 +461,37 @@ export function Devices() {
                               onChange={(icon) => onSetIcon(d, icon)}
                             />
                             <div className="devices-identity-text">
-                              <Link to={`/devices/${d.id}`} className="devices-name">
-                                {deviceLabel(d)}
-                              </Link>
-                              {d.name && d.hostname && (
-                                <span className="devices-sub">{d.hostname}</span>
+                              <div className="devices-name-row">
+                                <Link to={`/devices/${d.id}`} className="devices-name">
+                                  {deviceLabel(d)}
+                                </Link>
+                                {d.is_person && (
+                                  <span
+                                    className="devices-person-tag"
+                                    title="Marked as person (presence)"
+                                  >
+                                    person
+                                  </span>
+                                )}
+                                {d.is_new && (
+                                  <span
+                                    className="devices-new-tag"
+                                    title="First seen within 24h"
+                                  >
+                                    new
+                                  </span>
+                                )}
+                              </div>
+                              {(d.vendor || d.location || (d.name && d.hostname)) && (
+                                <span className="devices-sub">
+                                  {[
+                                    d.location,
+                                    d.vendor,
+                                    d.name && d.hostname ? d.hostname : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
                               )}
                               <div className="devices-hygiene-chips" aria-label="Hygiene summary">
                                 {d.latency_ms != null && (
@@ -456,16 +499,6 @@ export function Devices() {
                                     {Math.round(d.latency_ms)} ms
                                   </span>
                                 )}
-                                <span
-                                  className="hygiene-chip"
-                                  title={
-                                    d.ports_scanned_at
-                                      ? `Open ports (scanned ${d.ports_scanned_at})`
-                                      : "Open ports"
-                                  }
-                                >
-                                  {portCount} port{portCount === 1 ? "" : "s"}
-                                </span>
                                 {d.security_score != null ? (
                                   <span
                                     className={`hygiene-chip hygiene-score ${scoreClass(d.security_score)}`}
@@ -478,6 +511,32 @@ export function Devices() {
                                     —
                                   </span>
                                 )}
+                                {(() => {
+                                  const shares = d.smb_shares ?? [];
+                                  const disks = shares.filter(
+                                    (s) => s.share_type === "disk",
+                                  ).length;
+                                  const prints = shares.filter(
+                                    (s) => s.share_type === "print",
+                                  ).length;
+                                  if (disks === 0 && prints === 0) return null;
+                                  return (
+                                    <span
+                                      className="hygiene-chip hygiene-chip--smb"
+                                      title={
+                                        d.smb_scan_status
+                                          ? `SMB ${d.smb_scan_status}`
+                                          : "SMB shares"
+                                      }
+                                    >
+                                      {disks > 0 ? `${disks} share${disks === 1 ? "" : "s"}` : ""}
+                                      {disks > 0 && prints > 0 ? " · " : ""}
+                                      {prints > 0
+                                        ? `${prints} print${prints === 1 ? "" : "s"}`
+                                        : ""}
+                                    </span>
+                                  );
+                                })()}
                                 {risky && (
                                   <span
                                     className="hygiene-chip hygiene-chip--risk"
@@ -511,6 +570,52 @@ export function Devices() {
                       </td>
                       <td className="col-host">
                         <span className="devices-host">{d.hostname ?? "—"}</span>
+                      </td>
+                      <td className="col-ports">
+                        {ports.length === 0 ? (
+                          <span className="devices-ports-empty" title="No open ports recorded">
+                            —
+                          </span>
+                        ) : (
+                          <span
+                            className="devices-ports"
+                            title={
+                              d.ports_scanned_at
+                                ? `Open ports (scanned ${d.ports_scanned_at})`
+                                : "Open ports"
+                            }
+                          >
+                            {portsShown.map((p) => {
+                              const tip = [p.service, p.source]
+                                .filter(Boolean)
+                                .join(" · ");
+                              return (
+                                <span
+                                  key={`${p.port}-${p.source ?? ""}`}
+                                  className={
+                                    RISKY_PORTS.has(p.port)
+                                      ? "port-pill is-risk"
+                                      : "port-pill"
+                                  }
+                                  title={tip || `Port ${p.port}`}
+                                >
+                                  {p.port}
+                                </span>
+                              );
+                            })}
+                            {portsExtra > 0 && (
+                              <span
+                                className="port-pill port-pill--more"
+                                title={ports
+                                  .slice(portsCap)
+                                  .map((p) => p.port)
+                                  .join(", ")}
+                              >
+                                +{portsExtra}
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </td>
                       <td className="col-actions">
                         <div className="dev-tools" role="group" aria-label={`Actions for ${deviceLabel(d)}`}>

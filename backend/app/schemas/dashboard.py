@@ -25,8 +25,21 @@ class RecentNotificationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PresencePersonOut(BaseModel):
+    id: int
+    name: str | None = None
+    mac: str
+    ip: str | None = None
+    status: str
+    last_seen: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class DashboardOut(BaseModel):
     online_count: int
     total_count: int
     last_scan: LastScanOut | None
     recent_notifications: list[RecentNotificationOut]
+    people_home: list[PresencePersonOut] = []
+    people_away: list[PresencePersonOut] = []

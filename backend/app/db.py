@@ -38,18 +38,35 @@ def ensure_schema() -> None:
         return
     with engine.begin() as conn:
         rows = conn.execute(text("PRAGMA table_info(devices)")).fetchall()
-        if not rows:
-            return
-        col_names = {row[1] for row in rows}
-        if "name" not in col_names:
-            conn.execute(text("ALTER TABLE devices ADD COLUMN name VARCHAR(255)"))
-        if "icon" not in col_names:
-            conn.execute(text("ALTER TABLE devices ADD COLUMN icon VARCHAR(64)"))
-        for col, ddl in [
-            ("latency_ms", "ALTER TABLE devices ADD COLUMN latency_ms FLOAT"),
-            ("open_ports", "ALTER TABLE devices ADD COLUMN open_ports JSON"),
-            ("ports_scanned_at", "ALTER TABLE devices ADD COLUMN ports_scanned_at DATETIME"),
-            ("security_score", "ALTER TABLE devices ADD COLUMN security_score INTEGER"),
-        ]:
-            if col not in col_names:
-                conn.execute(text(ddl))
+        if rows:
+            col_names = {row[1] for row in rows}
+            if "name" not in col_names:
+                conn.execute(text("ALTER TABLE devices ADD COLUMN name VARCHAR(255)"))
+            if "icon" not in col_names:
+                conn.execute(text("ALTER TABLE devices ADD COLUMN icon VARCHAR(64)"))
+            for col, ddl in [
+                ("latency_ms", "ALTER TABLE devices ADD COLUMN latency_ms FLOAT"),
+                ("open_ports", "ALTER TABLE devices ADD COLUMN open_ports JSON"),
+                ("ports_scanned_at", "ALTER TABLE devices ADD COLUMN ports_scanned_at DATETIME"),
+                ("security_score", "ALTER TABLE devices ADD COLUMN security_score INTEGER"),
+                ("smb_shares", "ALTER TABLE devices ADD COLUMN smb_shares JSON"),
+                ("smb_scanned_at", "ALTER TABLE devices ADD COLUMN smb_scanned_at DATETIME"),
+                ("smb_scan_status", "ALTER TABLE devices ADD COLUMN smb_scan_status VARCHAR(32)"),
+                ("location", "ALTER TABLE devices ADD COLUMN location VARCHAR(128)"),
+                ("tls_status", "ALTER TABLE devices ADD COLUMN tls_status VARCHAR(32)"),
+                ("tls_expires_at", "ALTER TABLE devices ADD COLUMN tls_expires_at DATETIME"),
+                ("tls_issuer", "ALTER TABLE devices ADD COLUMN tls_issuer VARCHAR(255)"),
+                ("tls_checked_at", "ALTER TABLE devices ADD COLUMN tls_checked_at DATETIME"),
+                ("tls_error", "ALTER TABLE devices ADD COLUMN tls_error VARCHAR(255)"),
+                ("is_person", "ALTER TABLE devices ADD COLUMN is_person BOOLEAN DEFAULT 0"),
+            ]:
+                if col not in col_names:
+                    conn.execute(text(ddl))
+
+        scan_rows = conn.execute(text("PRAGMA table_info(scans)")).fetchall()
+        if scan_rows:
+            scan_cols = {row[1] for row in scan_rows}
+            if "mode" not in scan_cols:
+                conn.execute(
+                    text("ALTER TABLE scans ADD COLUMN mode VARCHAR(16) DEFAULT 'full'")
+                )

@@ -1,12 +1,21 @@
 import type { ReactNode } from "react";
+import {
+  formatDateTime as formatDateTimeTz,
+  formatDate as formatDateTz,
+  formatTime as formatTimeTz,
+} from "../lib/time";
 
+/** Format API UTC timestamps in the PC / user timezone. */
 export function formatDateTime(value: string | null | undefined): string {
-  if (!value) return "—";
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
-    return value;
-  }
+  return formatDateTimeTz(value);
+}
+
+export function formatDate(value: string | null | undefined): string {
+  return formatDateTz(value);
+}
+
+export function formatTime(value: string | null | undefined): string {
+  return formatTimeTz(value);
 }
 
 function statusClass(status: string): string {

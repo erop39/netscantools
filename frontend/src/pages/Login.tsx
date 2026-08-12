@@ -69,8 +69,10 @@ export function Login() {
       <div className="login-card">
         <div className="mb-8 text-center">
           <img className="login-logo" src="/icon.png" alt="eG::39 netscantools" width={52} height={52} />
-          <h1 className="text-xl font-semibold tracking-tight text-white">eG::39</h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">netscantools · sign in</p>
+          <h1 className="font-mono text-[1.05rem] font-semibold tracking-[0.06em] text-sky-50">eG::39</h1>
+          <p className="mt-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-sky-200/50">
+            netscantools · sign in
+          </p>
         </div>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-label="Sign in">

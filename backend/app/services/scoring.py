@@ -22,6 +22,11 @@ _NO_VENDOR_PENALTY = 5
 _NO_IDENTITY_PENALTY = 5
 _STALE_OR_OFFLINE_PENALTY = 15
 _NEW_DEVICE_PENALTY = 5
+_TLS_EXPIRED_PENALTY = 20
+_TLS_SELF_SIGNED_PENALTY = 8
+_TLS_ERROR_PENALTY = 5
+_TLS_EXPIRING_DAYS = 30
+_TLS_EXPIRING_PENALTY = 5
 
 
 @dataclass(frozen=True)
@@ -168,6 +173,54 @@ def compute_device_score(
                 )
             )
         )
+
+    tls_status = (getattr(device_like, "tls_status", None) or "").lower()
+    if tls_status == "expired":
+        score -= _TLS_EXPIRED_PENALTY
+        breakdown.append(
+            asdict(
+                ScoreBreakdownItem(
+                    code="tls_expired",
+                    label="TLS certificate expired",
+                    delta=-_TLS_EXPIRED_PENALTY,
+                )
+            )
+        )
+    elif tls_status == "self_signed":
+        score -= _TLS_SELF_SIGNED_PENALTY
+        breakdown.append(
+            asdict(
+                ScoreBreakdownItem(
+                    code="tls_self_signed",
+                    label="TLS certificate self-signed",
+                    delta=-_TLS_SELF_SIGNED_PENALTY,
+                )
+            )
+        )
+    elif tls_status in ("error",):
+        score -= _TLS_ERROR_PENALTY
+        breakdown.append(
+            asdict(
+                ScoreBreakdownItem(
+                    code="tls_error",
+                    label="TLS check error",
+                    delta=-_TLS_ERROR_PENALTY,
+                )
+            )
+        )
+    elif tls_status == "ok":
+        exp = _as_utc(getattr(device_like, "tls_expires_at", None))
+        if exp is not None and exp < now_utc + timedelta(days=_TLS_EXPIRING_DAYS):
+            score -= _TLS_EXPIRING_PENALTY
+            breakdown.append(
+                asdict(
+                    ScoreBreakdownItem(
+                        code="tls_expiring",
+                        label=f"TLS cert expires within {_TLS_EXPIRING_DAYS} days",
+                        delta=-_TLS_EXPIRING_PENALTY,
+                    )
+                )
+            )
 
     score = max(0, min(100, score))
     return score, breakdown

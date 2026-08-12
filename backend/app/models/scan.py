@@ -15,6 +15,8 @@ class Scan(Base):
     )
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="running")  # running|success|failed
+    # quick = presence only (ping+arp); full = + ports/latency
+    mode: Mapped[str] = mapped_column(String(16), default="full")  # quick|full
     subnet: Mapped[str] = mapped_column(String(64))
     devices_found: Mapped[int] = mapped_column(Integer, default=0)
     new_devices: Mapped[int] = mapped_column(Integer, default=0)

@@ -23,9 +23,14 @@ def dashboard(
     recent = (
         db.query(Notification).order_by(Notification.created_at.desc()).limit(10).all()
     )
+    people = db.query(Device).filter(Device.is_person.is_(True)).all()
+    people_home = [p for p in people if (p.status or "").lower() == "online"]
+    people_away = [p for p in people if (p.status or "").lower() != "online"]
     return DashboardOut(
         online_count=online,
         total_count=total,
         last_scan=last_scan,
         recent_notifications=recent,
+        people_home=people_home,
+        people_away=people_away,
     )

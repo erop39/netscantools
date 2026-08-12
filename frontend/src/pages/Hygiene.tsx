@@ -11,20 +11,26 @@ import {
   PageHeader,
   StatCard,
 } from "../components/ui";
-import { scoreClass } from "../lib/hygiene";
+import {
+  eventPort,
+  eventTone,
+  eventTypeLabel,
+  RISKY_PORTS,
+  scoreClass,
+} from "../lib/hygiene";
 import type { ChecklistItem, DeviceEvent, HygieneSummary } from "../types";
 
 function eventDetailsText(ev: DeviceEvent): string | null {
   if (!ev.details || typeof ev.details !== "object") return null;
   const parts: string[] = [];
   const d = ev.details;
-  if (typeof d.port === "number") parts.push(`port ${d.port}`);
+  // Port shown as pill next to type — skip duplicate in details
   if (typeof d.old_ip === "string" || typeof d.new_ip === "string") {
     parts.push(`${String(d.old_ip ?? "—")} → ${String(d.new_ip ?? "—")}`);
   }
   if (typeof d.ip === "string") parts.push(String(d.ip));
   if (typeof d.message === "string") parts.push(String(d.message));
-  if (parts.length === 0) {
+  if (parts.length === 0 && typeof d.port !== "number") {
     try {
       const s = JSON.stringify(d);
       return s === "{}" ? null : s;
@@ -32,7 +38,7 @@ function eventDetailsText(ev: DeviceEvent): string | null {
       return null;
     }
   }
-  return parts.join(" · ");
+  return parts.length ? parts.join(" · ") : null;
 }
 
 function riskLabel(r: HygieneSummary["top_risks"][number]): string {
@@ -281,11 +287,24 @@ export function Hygiene() {
                 <ul className="detail-timeline">
                   {summary.recent_events.map((ev) => {
                     const extra = eventDetailsText(ev);
+                    const port = eventPort(ev.details);
+                    const riskyPort = port != null && RISKY_PORTS.has(port);
                     return (
                       <li key={ev.id} className="detail-timeline-item">
-                        <span className="detail-timeline-type">
-                          {ev.type.replace(/_/g, " ")}
-                        </span>
+                        <div className="detail-timeline-head">
+                          <span className={`event-type ${eventTone(ev.type)}`}>
+                            {eventTypeLabel(ev.type)}
+                          </span>
+                          {port != null && (
+                            <span
+                              className={
+                                riskyPort ? "port-pill is-risk" : "port-pill"
+                              }
+                            >
+                              {port}
+                            </span>
+                          )}
+                        </div>
                         <span className="detail-timeline-time">
                           {formatDateTime(ev.created_at)}
                         </span>

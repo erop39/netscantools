@@ -10,6 +10,8 @@ export interface Device {
   vendor: string | null;
   hostname: string | null;
   name: string | null;
+  location?: string | null;
+  is_person?: boolean;
   type: string | null;
   icon: string | null;
   status: string;
@@ -25,6 +27,19 @@ export interface Device {
   security_score?: number | null;
   is_new?: boolean;
   score_breakdown?: { code: string; label: string; delta: number }[] | null;
+  smb_shares?: {
+    name: string;
+    share_type: "disk" | "print" | "ipc" | "unknown" | string;
+    comment?: string | null;
+    hidden?: boolean;
+  }[] | null;
+  smb_scanned_at?: string | null;
+  smb_scan_status?: string | null;
+  tls_status?: string | null;
+  tls_expires_at?: string | null;
+  tls_issuer?: string | null;
+  tls_checked_at?: string | null;
+  tls_error?: string | null;
 }
 
 export interface DeviceEvent {
@@ -61,15 +76,51 @@ export interface DeviceUpdate {
   type?: string | null;
   icon?: string | null;
   name?: string | null;
+  location?: string | null;
+  is_person?: boolean | null;
   notes?: string | null;
   web_ui_local?: string | null;
   web_ui_external?: string | null;
+}
+
+export interface LatencySample {
+  id: number;
+  rtt_ms: number;
+  recorded_at: string;
+}
+
+export interface InventoryItem {
+  id: number;
+  title: string;
+  serial_number: string | null;
+  category: string | null;
+  location: string | null;
+  notes: string | null;
+  device_id: number | null;
+  purchase_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PresencePerson {
+  id: number;
+  name: string | null;
+  mac: string;
+  ip: string | null;
+  status: string;
+  last_seen: string | null;
 }
 
 export interface PingResult {
   ok: boolean;
   ip: string;
   rtt_ms: number | null;
+  message: string;
+}
+
+export interface WolResult {
+  ok: boolean;
+  mac: string;
   message: string;
 }
 
@@ -108,6 +159,8 @@ export interface Dashboard {
   total_count: number;
   last_scan: LastScan | null;
   recent_notifications: RecentNotification[];
+  people_home?: PresencePerson[];
+  people_away?: PresencePerson[];
 }
 
 export interface Scan {
@@ -115,6 +168,7 @@ export interface Scan {
   started_at: string;
   finished_at: string | null;
   status: string;
+  mode?: "quick" | "full" | string;
   subnet: string;
   devices_found: number;
   new_devices: number;
@@ -140,6 +194,11 @@ export interface Settings {
   ui_background: UiBackground;
   ui_background_url: string | null;
   has_custom_background: boolean;
+  backup_interval_hours?: number;
+  backup_keep?: number;
+  backup_last_path?: string | null;
+  backup_count?: number;
+  share_scan_auto?: boolean;
 }
 
 export type PlanMatch = "match" | "mismatch" | "linked-no-ip" | "reserve";

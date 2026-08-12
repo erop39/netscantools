@@ -75,6 +75,8 @@ class DeviceOut(BaseModel):
     vendor: str | None
     hostname: str | None
     name: str | None = None
+    location: str | None = None
+    is_person: bool = False
     type: str | None
     icon: str | None = None
     status: str
@@ -90,6 +92,16 @@ class DeviceOut(BaseModel):
     ports_scanned_at: datetime | None = None
     security_score: int | None = None
     is_new: bool = False
+    # SMB shares (net view enum)
+    smb_shares: list | None = None
+    smb_scanned_at: datetime | None = None
+    smb_scan_status: str | None = None
+    # TLS
+    tls_status: str | None = None
+    tls_expires_at: datetime | None = None
+    tls_issuer: str | None = None
+    tls_checked_at: datetime | None = None
+    tls_error: str | None = None
     # Populated on GET by id only (via to_device_out(..., with_breakdown=True))
     score_breakdown: list[dict] | None = None
 
@@ -109,13 +121,15 @@ class DeviceUpdate(BaseModel):
     type: str | None = None
     icon: str | None = None
     name: str | None = None
+    location: str | None = None
+    is_person: bool | None = None
     notes: str | None = None
     web_ui_local: str | None = None
     web_ui_external: str | None = None
 
-    @field_validator("name")
+    @field_validator("name", "location")
     @classmethod
-    def strip_name(cls, v: str | None) -> str | None:
+    def strip_optional_text(cls, v: str | None) -> str | None:
         if v is None:
             return None
         cleaned = v.strip()
@@ -138,6 +152,12 @@ class PingOut(BaseModel):
     ok: bool
     ip: str
     rtt_ms: float | None = None
+    message: str
+
+
+class WolOut(BaseModel):
+    ok: bool
+    mac: str
     message: str
 
 

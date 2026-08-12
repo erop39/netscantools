@@ -11,6 +11,7 @@ import {
   LoadingState,
   PageHeader,
 } from "../components/ui";
+import { eventTone, eventTypeLabel } from "../lib/hygiene";
 import type { Notification } from "../types";
 
 export function Notifications() {
@@ -123,8 +124,8 @@ export function Notifications() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded bg-white/10 px-2 py-0.5 text-xs capitalize text-white/70">
-                      {n.type.replace(/_/g, " ")}
+                    <span className={`event-type ${eventTone(n.type)}`}>
+                      {eventTypeLabel(n.type)}
                     </span>
                     {!n.read && (
                       <span className="rounded-full bg-sky-400/20 px-2 py-0.5 text-[11px] font-medium text-sky-200">
