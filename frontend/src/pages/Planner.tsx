@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
 import { DarkSelect } from "../components/DarkSelect";
+import { DeviceLink } from "../components/DeviceLink";
 import {
   btnDangerClassName,
   btnPrimaryClassName,
@@ -19,6 +19,7 @@ import { DeviceIcon, iconLabel } from "../lib/deviceIcons";
 import { downloadPlanMapHtml } from "../lib/exportPlanHtml";
 import type {
   NetworkPlan,
+  InventoryPlanCandidate,
   PlanCandidate,
   PlanMatch,
   PlanPort,
@@ -125,6 +126,8 @@ export function Planner() {
   const [showInventory, setShowInventory] = useState(false);
   const [pickMac, setPickMac] = useState("");
   const [inventoryBusy, setInventoryBusy] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState<InventoryPlanCandidate[]>([]);
+  const [selectedInventoryIds, setSelectedInventoryIds] = useState<number[]>([]);
 
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -257,13 +260,45 @@ export function Planner() {
     setPickMac("");
     setError(null);
     try {
-      const list = await loadCandidates();
-      if (list.length === 0) {
-        flash("No unbound devices in inventory", false);
-      }
+      const [list, items] = await Promise.all([
+        loadCandidates(),
+        apiFetch<InventoryPlanCandidate[]>("/api/planner/inventory-candidates"),
+      ]);
+      setInventoryItems(items);
+      setSelectedInventoryIds([]);
+      if (list.length === 0 && items.length === 0) flash("No import candidates", false);
     } catch (err) {
       setError(parseApiError(err, "Failed to load candidates"));
       setShowInventory(false);
+    }
+  }
+
+  function toggleInventoryItem(id: number) {
+    setSelectedInventoryIds((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    );
+  }
+
+  async function onImportInventoryItems() {
+    if (selectedInventoryIds.length === 0) return;
+    setInventoryBusy(true);
+    setError(null);
+    try {
+      const next = await apiFetch<NetworkPlan>("/api/planner/inventory-import", {
+        method: "POST",
+        body: JSON.stringify({ inventory_item_ids: selectedInventoryIds }),
+      });
+      applyPlan(next);
+      const count = selectedInventoryIds.length;
+      setInventoryItems(
+        await apiFetch<InventoryPlanCandidate[]>("/api/planner/inventory-candidates"),
+      );
+      setSelectedInventoryIds([]);
+      flash(`${count} inventory item${count === 1 ? "" : "s"} imported`);
+    } catch (err) {
+      setError(parseApiError(err, "Failed to import inventory"));
+    } finally {
+      setInventoryBusy(false);
     }
   }
 
@@ -641,6 +676,54 @@ export function Planner() {
                   </button>
                 </div>
               )}
+              <div className="planner-inventory-divider" />
+              <div className="planner-inventory-head">
+                <div>
+                  <p className="planner-section-title">Import manual inventory</p>
+                  <p className="planner-section-hint">
+                    Linked equipment becomes live slots; unlinked equipment becomes reserves
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={btnPrimaryClassName}
+                  disabled={selectedInventoryIds.length === 0 || inventoryBusy}
+                  onClick={() => void onImportInventoryItems()}
+                >
+                  {inventoryBusy ? "Importing…" : `Import selected (${selectedInventoryIds.length})`}
+                </button>
+              </div>
+              {inventoryItems.length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)] mt-3">
+                  No manual inventory items available.
+                </p>
+              ) : (
+                <ul className="planner-inventory-items">
+                  {inventoryItems.map((item) => (
+                    <li key={item.id}>
+                      <label className="planner-inventory-item">
+                        <input
+                          type="checkbox"
+                          checked={selectedInventoryIds.includes(item.id)}
+                          onChange={() => toggleInventoryItem(item.id)}
+                        />
+                        <DeviceIcon name={item.device_icon} size={20} />
+                        <span className="planner-inventory-item-copy">
+                          <strong>{item.title}</strong>
+                          <small>
+                            {[item.category, item.location, item.device_ip]
+                              .filter(Boolean)
+                              .join(" · ") || "No details"}
+                          </small>
+                        </span>
+                        <span className={item.is_linked ? "planner-source linked" : "planner-source reserve"}>
+                          {item.is_linked ? "Linked" : "Reserve"}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </GlassCard>
           )}
 
@@ -737,12 +820,16 @@ export function Planner() {
                           </span>
                         )}
                         {slot.device_id != null && (
-                          <Link
-                            to={`/devices/${slot.device_id}`}
-                            className="planner-device-link"
-                          >
-                            Device
-                          </Link>
+                          <DeviceLink
+                            id={slot.device_id}
+                            name={
+                              draft.role_label ||
+                              draft.hostname_hint ||
+                              slot.device_mac ||
+                              undefined
+                            }
+                            className="device-link planner-device-link"
+                          />
                         )}
                       </div>
 

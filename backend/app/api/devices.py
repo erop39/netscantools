@@ -7,6 +7,7 @@ from app.api.deps import get_current_user
 from app.db import get_db
 from app.models.device import Device
 from app.models.event import DeviceEvent
+from app.models.inventory import InventoryLocation
 from app.models.setting import Setting
 from app.models.user import User
 from app.schemas.device import (
@@ -110,12 +111,10 @@ def list_locations(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[str]:
-    """Distinct non-empty location labels for filter dropdowns."""
+    """Canonical ordered location labels shared with manual inventory."""
     rows = (
-        db.query(Device.location)
-        .filter(Device.location.isnot(None), Device.location != "")
-        .distinct()
-        .order_by(Device.location.asc())
+        db.query(InventoryLocation.name)
+        .order_by(InventoryLocation.sort_order.asc(), InventoryLocation.name.asc())
         .all()
     )
     return [r[0] for r in rows if r[0]]
@@ -173,7 +172,22 @@ def update_device(
     _: User = Depends(get_current_user),
 ) -> DeviceOut:
     device = _get_device_or_404(db, device_id)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    if data.get("location"):
+        location = str(data["location"]).strip()
+        data["location"] = location
+        exists = (
+            db.query(InventoryLocation)
+            .filter(InventoryLocation.name.ilike(location))
+            .first()
+        )
+        if exists is None:
+            max_order = max(
+                (row[0] or 0 for row in db.query(InventoryLocation.sort_order).all()),
+                default=0,
+            )
+            db.add(InventoryLocation(name=location, sort_order=max_order + 10))
+    for field, value in data.items():
         setattr(device, field, value)
     device.updated_at = datetime.now(timezone.utc)
     db.commit()

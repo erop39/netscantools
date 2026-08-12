@@ -1,5 +1,8 @@
-from app.services import scanner as scanner_mod
+from datetime import datetime, timezone
+
 from app.models.device import Device
+from app.models.scan import Scan
+from app.services import scanner as scanner_mod
 
 
 def _seed_one_host(monkeypatch):
@@ -76,3 +79,26 @@ def test_quick_scan_skips_ports_and_latency(db_session, monkeypatch):
     # ports/latency not filled by quick scan
     assert d.latency_ms is None
     assert not d.open_ports
+
+
+def test_reclaim_orphaned_running_scans(db_session):
+    stuck = Scan(
+        status="running",
+        mode="full",
+        subnet="192.168.1.0/24",
+        devices_found=0,
+        new_devices=0,
+        started_at=datetime.now(timezone.utc),
+    )
+    db_session.add(stuck)
+    db_session.commit()
+    n = scanner_mod.reclaim_orphaned_scans(
+        db_session, reason="Interrupted (test)"
+    )
+    assert n == 1
+    db_session.refresh(stuck)
+    assert stuck.status == "failed"
+    assert stuck.finished_at is not None
+    assert "Interrupted" in (stuck.error_message or "")
+    # Second call is a no-op
+    assert scanner_mod.reclaim_orphaned_scans(db_session) == 0

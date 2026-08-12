@@ -10,6 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.device import Device
+from app.models.inventory import InventoryItem
 from app.models.plan import NetworkPlan, PlanPort, PlanSlot
 from app.models.setting import Setting
 from app.schemas.planner import PlanOut, PortOut, SlotOut
@@ -238,6 +239,7 @@ def _slot_to_out(slot: PlanSlot, devices: dict[str, Device]) -> SlotOut:
         hostname_hint=slot.hostname_hint,
         role_label=slot.role_label,
         device_mac=slot.device_mac,
+        inventory_item_id=slot.inventory_item_id,
         notes=slot.notes,
         ports=ports_out,
         live_ip=live_ip,
@@ -299,6 +301,7 @@ def build_export_dict(plan: NetworkPlan) -> dict:
                 "hostname_hint": slot.hostname_hint,
                 "role_label": slot.role_label,
                 "device_mac": slot.device_mac,
+                "inventory_item_id": slot.inventory_item_id,
                 "notes": slot.notes,
                 "ports": [
                     {
@@ -370,6 +373,7 @@ def import_plan_replace(db: Session, data: dict) -> NetworkPlan:
                 "hostname_hint": raw.get("hostname_hint"),
                 "role_label": raw.get("role_label"),
                 "device_mac": mac,
+                "inventory_item_id": raw.get("inventory_item_id"),
                 "notes": raw.get("notes"),
                 "ports": ports_out,
             }
@@ -419,6 +423,7 @@ def import_plan_replace(db: Session, data: dict) -> NetworkPlan:
             hostname_hint=s["hostname_hint"],
             role_label=s["role_label"],
             device_mac=s["device_mac"],
+            inventory_item_id=s["inventory_item_id"],
             notes=s["notes"],
         )
         db.add(slot)
@@ -461,3 +466,92 @@ def list_candidates(db: Session) -> list[Device]:
         if mac_key and mac_key not in bound:
             candidates.append(device)
     return candidates
+
+
+def list_inventory_candidates(db: Session) -> list[InventoryItem]:
+    plan = ensure_plan(db)
+    imported = {
+        slot.inventory_item_id
+        for slot in plan.slots
+        if slot.inventory_item_id is not None
+    }
+    query = db.query(InventoryItem).order_by(InventoryItem.title, InventoryItem.id)
+    if imported:
+        query = query.filter(InventoryItem.id.notin_(imported))
+    return query.all()
+
+
+def _inventory_notes(item: InventoryItem) -> str | None:
+    lines = []
+    if item.category:
+        lines.append(f"Category: {item.category}")
+    if item.serial_number:
+        lines.append(f"S/N: {item.serial_number}")
+    if item.location:
+        lines.append(f"Location: {item.location}")
+    if item.notes:
+        lines.append(item.notes)
+    return "\n".join(lines) or None
+
+
+def import_inventory_items(db: Session, item_ids: list[int]) -> NetworkPlan:
+    if len(item_ids) != len(set(item_ids)):
+        raise HTTPException(status_code=400, detail="Duplicate inventory item id")
+    plan = ensure_plan(db)
+    items = db.query(InventoryItem).filter(InventoryItem.id.in_(item_ids)).all()
+    by_id = {item.id: item for item in items}
+    if len(by_id) != len(item_ids):
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    imported = {
+        slot.inventory_item_id
+        for slot in plan.slots
+        if slot.inventory_item_id is not None
+    }
+    if imported.intersection(item_ids):
+        raise HTTPException(status_code=409, detail="Inventory item already imported")
+    devices = {
+        device.id: device
+        for device in db.query(Device)
+        .filter(Device.id.in_({i.device_id for i in items if i.device_id is not None}))
+        .all()
+    }
+    macs = {
+        normalize_mac(slot.device_mac)
+        for slot in plan.slots
+        if slot.device_mac
+    }
+    planned_ips = {slot.planned_ip for slot in plan.slots if slot.planned_ip}
+    next_order = next_slot_sort_order(db, plan.id)
+    pending = []
+    for offset, item_id in enumerate(item_ids):
+        item = by_id[item_id]
+        device = devices.get(item.device_id) if item.device_id is not None else None
+        mac = normalize_mac(device.mac) if device else None
+        if mac and mac in macs:
+            raise HTTPException(status_code=409, detail="Linked device already on plan")
+        if mac:
+            macs.add(mac)
+        planned_ip = device.ip if device else None
+        if planned_ip and plan.cidr and not ip_in_cidr(planned_ip, plan.cidr):
+            planned_ip = None
+        if planned_ip and planned_ip in planned_ips:
+            raise HTTPException(status_code=409, detail="Planned IP already on plan")
+        if planned_ip:
+            planned_ips.add(planned_ip)
+        pending.append(
+            PlanSlot(
+                plan_id=plan.id,
+                sort_order=next_order + offset,
+                inventory_item_id=item.id,
+                planned_ip=planned_ip,
+                hostname_hint=(device.hostname or device.name) if device else None,
+                role_label=item.title,
+                device_mac=mac,
+                notes=_inventory_notes(item),
+            )
+        )
+    db.add_all(pending)
+    touch_plan(plan)
+    db.commit()
+    db.refresh(plan)
+    return plan

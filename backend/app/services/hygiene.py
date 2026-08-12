@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.device import Device
 from app.models.event import DeviceEvent
 from app.models.hygiene import HygieneChecklistItem
+from app.services.device_label import device_names_by_id
 from app.services.scoring import NEW_DEVICE_HOURS, RISKY_PORTS, compute_network_score
 
 # Spec §5.3 — seed when checklist table is empty
@@ -143,10 +144,16 @@ def build_hygiene_summary(db: Session) -> dict[str, Any]:
         .limit(RECENT_EVENTS_LIMIT)
         .all()
     )
+    event_names = device_names_by_id(
+        db, {e.device_id for e in recent if e.device_id is not None}
+    )
     recent_events = [
         {
             "id": e.id,
             "device_id": e.device_id,
+            "device_name": (
+                event_names.get(e.device_id) if e.device_id is not None else None
+            ),
             "type": e.type,
             "details": e.details,
             "created_at": e.created_at,

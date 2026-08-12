@@ -2,14 +2,18 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title netscantools
+echo.
+echo === netscantools: RESTART ===
+echo.
+
+call "%~dp0stop.bat" /nopause
 
 echo.
-echo === netscantools: START ===
+echo Starting API + UI...
 echo   UI  http://127.0.0.1:5173
 echo   API http://127.0.0.1:8000
 echo   Login admin / admin
-echo   Stop: Ctrl+C  or  double-click stop.bat
+echo   Stop: Ctrl+C in this window, or stop.bat
 echo.
 
 where python >nul 2>&1
@@ -19,7 +23,8 @@ if errorlevel 1 (
   exit /b 1
 )
 
-python run.py %*
+title netscantools
+python run.py --skip-install %*
 set EXITCODE=%ERRORLEVEL%
 if not %EXITCODE%==0 (
   echo.

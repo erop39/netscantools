@@ -48,6 +48,7 @@ export interface DeviceEvent {
   details: Record<string, unknown> | null;
   created_at: string;
   device_id?: number | null;
+  device_name?: string | null;
 }
 
 export interface HygieneSummary {
@@ -102,9 +103,18 @@ export interface InventoryItem {
   updated_at: string;
 }
 
+export interface InventoryLocation {
+  id: number;
+  name: string;
+  /** Display priority: 1 first, then 2, 3… */
+  sort_order: number;
+  created_at: string;
+}
+
 export interface PresencePerson {
   id: number;
   name: string | null;
+  hostname: string | null;
   mac: string;
   ip: string | null;
   status: string;
@@ -149,6 +159,11 @@ export interface LastScan {
 export interface RecentNotification {
   id: number;
   type: string;
+  device_id?: number | null;
+  device_name?: string | null;
+  device_ip?: string | null;
+  device_mac?: string | null;
+  device_hostname?: string | null;
   message: string;
   read: boolean;
   created_at: string;
@@ -179,6 +194,10 @@ export interface Notification {
   id: number;
   type: string;
   device_id: number | null;
+  device_name?: string | null;
+  device_ip?: string | null;
+  device_mac?: string | null;
+  device_hostname?: string | null;
   message: string;
   read: boolean;
   created_at: string;
@@ -217,6 +236,7 @@ export interface PlanSlot {
   hostname_hint: string | null;
   role_label: string | null;
   device_mac: string | null;
+  inventory_item_id: number | null;
   notes: string | null;
   live_ip: string | null;
   live_status: string | null;
@@ -243,4 +263,20 @@ export interface PlanCandidate {
   name: string | null;
   hostname: string | null;
   status: string;
+}
+
+export interface InventoryPlanCandidate {
+  id: number;
+  title: string;
+  category: string | null;
+  serial_number: string | null;
+  location: string | null;
+  notes: string | null;
+  is_linked: boolean;
+  device_id: number | null;
+  device_mac: string | null;
+  device_ip: string | null;
+  device_hostname: string | null;
+  device_name: string | null;
+  device_icon: string | null;
 }

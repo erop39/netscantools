@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
+import { DarkSelect } from "../components/DarkSelect";
 import {
   btnDangerClassName,
   btnPrimaryClassName,
@@ -95,6 +96,7 @@ export function DeviceDetail() {
 
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
+  const [locationCatalog, setLocationCatalog] = useState<string[]>([]);
   const [isPerson, setIsPerson] = useState(false);
   const [type, setType] = useState("");
   const [icon, setIcon] = useState<string | null>(null);
@@ -114,17 +116,19 @@ export function DeviceDetail() {
       setLoading(true);
       setError(null);
       try {
-        const [d, ev, lat] = await Promise.all([
+        const [d, ev, lat, locations] = await Promise.all([
           apiFetch<Device>(`/api/devices/${id}`),
           apiFetch<DeviceEvent[]>(`/api/devices/${id}/events`).catch(() => [] as DeviceEvent[]),
           apiFetch<LatencySample[]>(`/api/devices/${id}/latency-history`).catch(
             () => [] as LatencySample[],
           ),
+          apiFetch<string[]>("/api/devices/locations").catch(() => [] as string[]),
         ]);
         if (cancelled) return;
         setDevice(d);
         setEvents(ev);
         setLatencyHistory(lat);
+        setLocationCatalog(locations);
         setName(d.name ?? "");
         setLocation(d.location ?? "");
         setIsPerson(Boolean(d.is_person));
@@ -993,23 +997,19 @@ export function DeviceDetail() {
 
               <label className="device-field">
                 <span className="device-field-label">Location</span>
-                <input
-                  type="text"
+                <DarkSelect
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  onChange={setLocation}
                   placeholder="Living room, Garage, Rack…"
-                  className={fieldClassName}
-                  list="device-location-hints"
+                  aria-label="Location"
+                  options={[
+                    { value: "", label: "— no location —" },
+                    ...(location && !locationCatalog.includes(location)
+                      ? [{ value: location, label: `${location} (unlisted)` }]
+                      : []),
+                    ...locationCatalog.map((value) => ({ value, label: value })),
+                  ]}
                 />
-                <datalist id="device-location-hints">
-                  <option value="Living room" />
-                  <option value="Bedroom" />
-                  <option value="Kitchen" />
-                  <option value="Office" />
-                  <option value="Garage" />
-                  <option value="Basement" />
-                  <option value="Rack" />
-                </datalist>
                 <span className="device-field-hint">
                   Room / place — filterable on Devices list
                 </span>

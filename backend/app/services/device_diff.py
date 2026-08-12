@@ -8,6 +8,12 @@ from sqlalchemy.orm import Session
 
 from app.models.device import Device
 from app.services.device_events import log_event, log_event_and_maybe_notify
+from app.services.device_label import (
+    format_notify_ip_changed,
+    format_notify_new_device,
+    format_notify_offline,
+    format_notify_port_opened,
+)
 from app.services.nettools import default_web_ui_local
 from app.services.oui import backfill_device_vendors, lookup_vendor
 from app.services.scoring import compute_device_score
@@ -74,8 +80,14 @@ def update_device_probe_fields(
                 db,
                 device.id,
                 "port_opened",
-                f"Port {port} opened on {device.mac}",
-                details={"mac": device.mac, "port": port, "ip": device.ip},
+                format_notify_port_opened(device, port=port),
+                details={
+                    "mac": device.mac,
+                    "port": port,
+                    "ip": device.ip,
+                    "name": device.name,
+                    "hostname": device.hostname,
+                },
             )
         for port in sorted(prev_ports - new_ports):
             log_event(
@@ -123,8 +135,16 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
                 db,
                 device.id,
                 "new_device",
-                f"New device {mac} at {host.ip}",
-                details={"mac": mac, "ip": host.ip},
+                format_notify_new_device(
+                    device, ip=host.ip, hostname=host.hostname
+                ),
+                details={
+                    "mac": mac,
+                    "ip": host.ip,
+                    "hostname": host.hostname,
+                    "name": device.name,
+                    "vendor": vendor,
+                },
             )
             new_count += 1
             touched.append(device)
@@ -136,8 +156,16 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
                     db,
                     device.id,
                     "ip_changed",
-                    f"{mac} IP changed {old_ip} → {host.ip}",
-                    details={"mac": mac, "old_ip": old_ip, "new_ip": host.ip},
+                    format_notify_ip_changed(
+                        device, old_ip=old_ip, new_ip=host.ip
+                    ),
+                    details={
+                        "mac": mac,
+                        "old_ip": old_ip,
+                        "new_ip": host.ip,
+                        "name": device.name,
+                        "hostname": device.hostname or host.hostname,
+                    },
                 )
             if was_offline:
                 # Event only — no notification (came_online maps to None)
@@ -169,8 +197,13 @@ def apply_scan_results(db: Session, found: list[HostResult]) -> DiffResult:
                 db,
                 device.id,
                 "went_offline",
-                f"Device {device.mac} went offline",
-                details={"mac": device.mac},
+                format_notify_offline(device),
+                details={
+                    "mac": device.mac,
+                    "ip": device.ip,
+                    "name": device.name,
+                    "hostname": device.hostname,
+                },
             )
             touched.append(device)
 

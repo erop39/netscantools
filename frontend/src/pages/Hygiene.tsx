@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
+import { DeviceLink } from "../components/DeviceLink";
 import {
   btnPrimaryClassName,
   EmptyState,
@@ -250,12 +250,11 @@ export function Hygiene() {
                   {summary.top_risks.map((r) => (
                     <li key={r.device_id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                       <div className="min-w-0">
-                        <Link
-                          to={`/devices/${r.device_id}`}
-                          className="link-accent truncate text-sm font-medium"
-                        >
-                          {riskLabel(r)}
-                        </Link>
+                        <DeviceLink
+                          id={r.device_id}
+                          name={riskLabel(r)}
+                          className="device-link truncate text-sm font-medium"
+                        />
                         <p className="mt-0.5 truncate font-mono text-xs text-white/45">
                           {r.ip ?? "—"} · {r.mac}
                         </p>
@@ -284,7 +283,7 @@ export function Hygiene() {
                   hint="Device changes and port activity will show up here."
                 />
               ) : (
-                <ul className="detail-timeline">
+                <ul className="detail-timeline hygiene-recent-events">
                   {summary.recent_events.map((ev) => {
                     const extra = eventDetailsText(ev);
                     const port = eventPort(ev.details);
@@ -308,16 +307,15 @@ export function Hygiene() {
                         <span className="detail-timeline-time">
                           {formatDateTime(ev.created_at)}
                         </span>
+                        {ev.device_id != null && (
+                          <DeviceLink
+                            id={ev.device_id}
+                            name={ev.device_name}
+                            className="device-link text-sm font-medium"
+                          />
+                        )}
                         {extra && (
                           <span className="detail-timeline-details">{extra}</span>
-                        )}
-                        {ev.device_id != null && (
-                          <Link
-                            to={`/devices/${ev.device_id}`}
-                            className="link-accent text-xs"
-                          >
-                            Device →
-                          </Link>
                         )}
                       </li>
                     );

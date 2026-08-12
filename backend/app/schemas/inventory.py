@@ -3,6 +3,43 @@ from datetime import datetime
 from pydantic import BaseModel, field_validator
 
 
+class InventoryLocationOut(BaseModel):
+    id: int
+    name: str
+    sort_order: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class InventoryLocationCreate(BaseModel):
+    name: str
+    sort_order: int | None = None
+
+    @field_validator("name")
+    @classmethod
+    def name_required(cls, v: str) -> str:
+        cleaned = (v or "").strip()
+        if not cleaned:
+            raise ValueError("name is required")
+        return cleaned[:128]
+
+
+class InventoryLocationUpdate(BaseModel):
+    name: str | None = None
+    sort_order: int | None = None
+
+    @field_validator("name")
+    @classmethod
+    def name_opt(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("name cannot be empty")
+        return cleaned[:128]
+
+
 class InventoryItemOut(BaseModel):
     id: int
     title: str

@@ -22,7 +22,7 @@ from app.timeutil import install_utc_json_encoders, to_api_iso, utc_now
 install_utc_json_encoders()
 
 settings = get_settings()
-app = FastAPI(title="netscantools", version="0.9.0-beta.1")
+app = FastAPI(title="netscantools", version="0.9.0-beta.2")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -50,6 +50,18 @@ def on_startup() -> None:
     try:
         ensure_admin_user(db)
         ensure_default_settings(db)
+        # Crash/restart leaves scans.status=running and blocks all new scans.
+        from app.services.scanner import reclaim_orphaned_scans
+
+        n = reclaim_orphaned_scans(
+            db, reason="Interrupted (server restart — scan did not finish)"
+        )
+        if n:
+            import logging
+
+            logging.getLogger("netscantools").warning(
+                "Reclaimed %s orphaned running scan(s) on startup", n
+            )
     finally:
         db.close()
     # Warm OUI cache in background — never block API boot on IEEE download

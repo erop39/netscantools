@@ -13,6 +13,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **HAOS IoT bridge** — pull/remember IoT from Home Assistant (see `docs/todo.md`)
 - multi-VLAN (see `docs/todo.md`)
 
+## [0.9.0-beta.2] — 2026-08-12
+
+### Added
+
+- Inventory board with ordered location catalog, drag-and-drop item placement, and compact device identity cards
+- Human-readable device links and identity details across dashboard, notifications, hygiene, inventory, and Planner
+- Planner bulk import from manual inventory, including linked devices and unlinked reserve equipment
+- Inventory provenance on Planner slots to prevent duplicate imports
+- Always-visible `Who's home` card on Home listing online presence-enabled devices
+
+### Changed
+
+- Devices and manual inventory now use one canonical ordered location catalog
+- Renaming a catalog location updates matching Devices and Inventory items atomically
+- Inventory cards now present title, linked device, category, IP, vendor, location, purchase date, and notes in a readable hierarchy
+- Deleted catalog locations remain deleted while existing record text is preserved as unlisted
+
+### Fixed
+
+- Orphaned running scans are reclaimed after server restart instead of blocking future scans
+- Device notifications and recent events show useful device identity instead of internal numeric IDs
+- Hygiene Recent events now scrolls inside a stable 360 px list with a visible themed scrollbar
+- `Who's home` now prefers manual name or hostname and no longer repeats IP as both name and detail
+
 ## [0.9.0-beta.1] — 2026-08-12
 
 First public beta after Hygiene 0.8.0 — home LAN inventory, hygiene, and ops tools.

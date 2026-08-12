@@ -6,7 +6,12 @@ from app.db import get_db
 from app.models.scan import Scan
 from app.models.user import User
 from app.schemas.scan import ScanOut, ScanStart
-from app.services.scanner import ScanAlreadyRunning, is_scan_locked, run_scan_job
+from app.services.scanner import (
+    ScanAlreadyRunning,
+    is_scan_locked,
+    reclaim_orphaned_scans,
+    run_scan_job,
+)
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
 
@@ -28,6 +33,8 @@ def start_scan(
             status_code=status.HTTP_409_CONFLICT,
             detail="Scan already running",
         )
+    # Free lock ⇒ "running" rows are stale leftovers from a killed process.
+    reclaim_orphaned_scans(db, reason="Interrupted (orphaned running scan)")
     if db.query(Scan).filter(Scan.status == "running").first() is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

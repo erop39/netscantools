@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../api/client";
 import {
   clockSkewMs,
@@ -12,13 +12,43 @@ import {
   isSystemTimeZone,
   setUserTimeZone,
 } from "../lib/time";
-import { btnSecondaryClassName, fieldClassName } from "./ui";
+import { DarkSelect, type DarkSelectOption } from "./DarkSelect";
+import { btnSecondaryClassName } from "./ui";
 
 type ServerTime = {
   server_time_utc: string;
   server_timezone: string;
   unix_ms: string;
 };
+
+/** Common IANA zones for the home-lab UI override list. */
+const FIXED_TIMEZONES: { value: string; label: string }[] = [
+  { value: "UTC", label: "UTC" },
+  { value: "Europe/Moscow", label: "Europe/Moscow" },
+  { value: "Europe/Kyiv", label: "Europe/Kyiv" },
+  { value: "Europe/Berlin", label: "Europe/Berlin" },
+  { value: "Europe/London", label: "Europe/London" },
+  { value: "America/New_York", label: "America/New_York" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles" },
+  { value: "Asia/Almaty", label: "Asia/Almaty" },
+  { value: "Asia/Yekaterinburg", label: "Asia/Yekaterinburg" },
+  { value: "Asia/Novosibirsk", label: "Asia/Novosibirsk" },
+  { value: "Asia/Vladivostok", label: "Asia/Vladivostok" },
+];
+
+function zoneOffsetHint(zone: string, date: Date): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      timeZoneName: "longOffset",
+    }).formatToParts(date);
+    const name = parts.find((p) => p.type === "timeZoneName")?.value;
+    if (name) return name.replace("GMT", "UTC");
+  } catch {
+    /* ignore */
+  }
+  return zone;
+}
 
 /** Settings card: PC timezone + server UTC clock sync status. */
 export function TimeSyncCard() {
@@ -28,6 +58,25 @@ export function TimeSyncCard() {
   const [serverUtc, setServerUtc] = useState<string | null>(null);
   const [skew, setSkew] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const tzOptions: DarkSelectOption[] = useMemo(() => {
+    const at = new Date();
+    const system = getSystemTimeZone();
+    const fixed: DarkSelectOption[] = FIXED_TIMEZONES.map((z) => ({
+      value: z.value,
+      label: z.label,
+      hint: zoneOffsetHint(z.value, at),
+    }));
+    // Rebuild when display zone changes (not every clock tick).
+    return [
+      {
+        value: "system",
+        label: `System (${system})`,
+        hint: "Follow OS clock",
+      },
+      ...fixed,
+    ];
+  }, [tz, useSystem]);
 
   const refreshServer = useCallback(async () => {
     try {
@@ -115,29 +164,16 @@ export function TimeSyncCard() {
 
       <label className="mb-2 flex flex-col gap-1.5 text-sm text-white/85">
         Display timezone
-        <select
-          className={fieldClassName}
+        <DarkSelect
           value={useSystem ? "system" : tz}
-          onChange={(e) => {
-            const v = e.target.value;
+          onChange={(v) => {
             if (v === "system") applySystem();
             else applyZone(v);
           }}
+          options={tzOptions}
           aria-label="Display timezone"
-        >
-          <option value="system">System ({getSystemTimeZone()})</option>
-          <option value="UTC">UTC</option>
-          <option value="Europe/Moscow">Europe/Moscow</option>
-          <option value="Europe/Kyiv">Europe/Kyiv</option>
-          <option value="Europe/Berlin">Europe/Berlin</option>
-          <option value="Europe/London">Europe/London</option>
-          <option value="America/New_York">America/New_York</option>
-          <option value="America/Los_Angeles">America/Los_Angeles</option>
-          <option value="Asia/Almaty">Asia/Almaty</option>
-          <option value="Asia/Yekaterinburg">Asia/Yekaterinburg</option>
-          <option value="Asia/Novosibirsk">Asia/Novosibirsk</option>
-          <option value="Asia/Vladivostok">Asia/Vladivostok</option>
-        </select>
+          placeholder="Choose timezone…"
+        />
       </label>
       <p className="mb-3 text-xs text-white/40">
         Default follows the OS clock. Override only if you want a fixed zone in the UI.

@@ -179,6 +179,29 @@ def is_scan_locked() -> bool:
     return _scan_lock.locked()
 
 
+def reclaim_orphaned_scans(db: Session, *, reason: str = "Interrupted") -> int:
+    """Mark DB rows stuck in ``running`` as failed when no scan holds the lock.
+
+    After process crash/restart the in-memory lock is free but SQLite may still
+    have ``status=running``, which blocks every new scan with 409 forever.
+    Safe to call on API startup and before starting a new job.
+    Returns number of rows updated.
+    """
+    if _scan_lock.locked():
+        return 0
+    now = datetime.now(timezone.utc)
+    rows = db.query(Scan).filter(Scan.status == "running").all()
+    if not rows:
+        return 0
+    msg = (reason or "Interrupted")[:2000]
+    for scan in rows:
+        scan.status = "failed"
+        scan.error_message = msg
+        scan.finished_at = now
+    db.commit()
+    return len(rows)
+
+
 def _has_open_port(device: Device, port: int) -> bool:
     ports = device.open_ports if isinstance(device.open_ports, list) else None
     if not ports:
@@ -268,6 +291,9 @@ def run_scan_job(db: Session, *, mode: str = "full") -> Scan:
     if not _scan_lock.acquire(blocking=False):
         raise ScanAlreadyRunning("A scan is already running")
     try:
+        # Lock free ⇒ any leftover "running" row is orphaned (crash / kill).
+        reclaim_orphaned_scans(db, reason="Interrupted (orphaned before start)")
+
         existing = db.query(Scan).filter(Scan.status == "running").first()
         if existing is not None:
             raise ScanAlreadyRunning("A scan is already running")

@@ -6,10 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.db import get_db
+from app.models.device import Device
 from app.models.plan import PlanPort, PlanSlot
 from app.models.user import User
 from app.schemas.planner import (
     PlanCandidate,
+    InventoryImportBody,
+    InventoryPlanCandidate,
     PlanImport,
     PlanOut,
     PlanUpdate,
@@ -270,3 +273,47 @@ def get_candidates(
         )
         for d in devices
     ]
+
+
+@router.get("/inventory-candidates", response_model=list[InventoryPlanCandidate])
+def get_inventory_candidates(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[InventoryPlanCandidate]:
+    rows = svc.list_inventory_candidates(db)
+    device_ids = {row.device_id for row in rows if row.device_id is not None}
+    devices = (
+        {d.id: d for d in db.query(Device).filter(Device.id.in_(device_ids)).all()}
+        if device_ids
+        else {}
+    )
+    return [
+        InventoryPlanCandidate(
+            id=row.id,
+            title=row.title,
+            category=row.category,
+            serial_number=row.serial_number,
+            location=row.location,
+            notes=row.notes,
+            is_linked=row.device_id in devices,
+            device_id=row.device_id,
+            device_mac=devices[row.device_id].mac if row.device_id in devices else None,
+            device_ip=devices[row.device_id].ip if row.device_id in devices else None,
+            device_hostname=(
+                devices[row.device_id].hostname if row.device_id in devices else None
+            ),
+            device_name=devices[row.device_id].name if row.device_id in devices else None,
+            device_icon=devices[row.device_id].icon if row.device_id in devices else None,
+        )
+        for row in rows
+    ]
+
+
+@router.post("/inventory-import", response_model=PlanOut)
+def import_inventory(
+    body: InventoryImportBody,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> PlanOut:
+    plan = svc.import_inventory_items(db, body.inventory_item_ids)
+    return svc.plan_to_out(db, plan)

@@ -70,3 +70,21 @@ def ensure_schema() -> None:
                 conn.execute(
                     text("ALTER TABLE scans ADD COLUMN mode VARCHAR(16) DEFAULT 'full'")
                 )
+
+        slot_rows = conn.execute(text("PRAGMA table_info(plan_slots)")).fetchall()
+        if slot_rows:
+            slot_cols = {row[1] for row in slot_rows}
+            if "inventory_item_id" not in slot_cols:
+                conn.execute(
+                    text(
+                        "ALTER TABLE plan_slots ADD COLUMN inventory_item_id INTEGER "
+                        "REFERENCES inventory_items(id) ON DELETE SET NULL"
+                    )
+                )
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_plan_slot_inventory_item "
+                    "ON plan_slots(plan_id, inventory_item_id) "
+                    "WHERE inventory_item_id IS NOT NULL"
+                )
+            )

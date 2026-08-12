@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { ApiError, apiFetch } from "../api/client";
+import { NotificationDeviceMeta } from "../components/NotificationDeviceMeta";
 import {
   btnPrimaryClassName,
   btnSecondaryClassName,
@@ -132,15 +132,12 @@ export function Notifications() {
                         Unread
                       </span>
                     )}
-                    {n.device_id != null && (
-                      <Link
-                        to={`/devices/${n.device_id}`}
-                        className="text-xs text-sky-300/90 hover:text-sky-200"
-                      >
-                        Device #{n.device_id}
-                      </Link>
-                    )}
                   </div>
+                  {n.device_id != null && (
+                    <div className="mt-1.5">
+                      <NotificationDeviceMeta n={n} />
+                    </div>
+                  )}
                   <p className="mt-1.5 text-sm text-white/90">{n.message}</p>
                   <time className="mt-1 block text-xs text-white/45">
                     {formatDateTime(n.created_at)}

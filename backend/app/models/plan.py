@@ -28,6 +28,9 @@ class PlanSlot(Base):
     __table_args__ = (
         UniqueConstraint("plan_id", "planned_ip", name="uq_plan_slot_ip"),
         UniqueConstraint("plan_id", "device_mac", name="uq_plan_slot_mac"),
+        UniqueConstraint(
+            "plan_id", "inventory_item_id", name="uq_plan_slot_inventory_item"
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -37,6 +40,9 @@ class PlanSlot(Base):
     hostname_hint: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role_label: Mapped[str | None] = mapped_column(String(128), nullable=True)
     device_mac: Mapped[str | None] = mapped_column(String(17), nullable=True)
+    inventory_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_items.id", ondelete="SET NULL"), nullable=True
+    )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     plan: Mapped["NetworkPlan"] = relationship(back_populates="slots")
     ports: Mapped[list["PlanPort"]] = relationship(

@@ -20,6 +20,7 @@ class SlotOut(BaseModel):
     hostname_hint: str | None
     role_label: str | None
     device_mac: str | None
+    inventory_item_id: int | None = None
     notes: str | None
     ports: list[PortOut] = []
     live_ip: str | None = None
@@ -90,6 +91,7 @@ class PlanImportSlot(BaseModel):
     hostname_hint: str | None = None
     role_label: str | None = None
     device_mac: str | None = None
+    inventory_item_id: int | None = None
     notes: str | None = None
     ports: list[PlanImportPort] = []
 
@@ -117,3 +119,23 @@ class PlanCandidate(BaseModel):
     status: str
 
     model_config = {"from_attributes": True}
+
+
+class InventoryPlanCandidate(BaseModel):
+    id: int
+    title: str
+    category: str | None = None
+    serial_number: str | None = None
+    location: str | None = None
+    notes: str | None = None
+    is_linked: bool
+    device_id: int | None = None
+    device_mac: str | None = None
+    device_ip: str | None = None
+    device_hostname: str | None = None
+    device_name: str | None = None
+    device_icon: str | None = None
+
+
+class InventoryImportBody(BaseModel):
+    inventory_item_ids: list[int] = Field(min_length=1)

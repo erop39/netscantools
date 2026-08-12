@@ -18,6 +18,11 @@ class LastScanOut(BaseModel):
 class RecentNotificationOut(BaseModel):
     id: int
     type: str
+    device_id: int | None = None
+    device_name: str | None = None
+    device_ip: str | None = None
+    device_mac: str | None = None
+    device_hostname: str | None = None
     message: str
     read: bool
     created_at: datetime
@@ -28,6 +33,7 @@ class RecentNotificationOut(BaseModel):
 class PresencePersonOut(BaseModel):
     id: int
     name: str | None = None
+    hostname: str | None = None
     mac: str
     ip: str | None = None
     status: str

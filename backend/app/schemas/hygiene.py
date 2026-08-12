@@ -21,6 +21,7 @@ class HygieneTopRiskOut(BaseModel):
 class HygieneEventOut(BaseModel):
     id: int
     device_id: int | None = None
+    device_name: str | None = None
     type: str
     details: dict | None = None
     created_at: datetime

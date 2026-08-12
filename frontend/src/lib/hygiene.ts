@@ -29,7 +29,21 @@ export function eventTone(type: string | null | undefined): string {
   return "is-neutral";
 }
 
+const EVENT_LABELS: Record<string, string> = {
+  new_device: "New device",
+  device_offline: "Went offline",
+  went_offline: "Went offline",
+  ip_changed: "IP changed",
+  port_opened: "Port opened",
+  port_closed: "Port closed",
+  share_found: "Share found",
+  share_gone: "Share gone",
+  came_online: "Came online",
+};
+
 export function eventTypeLabel(type: string | null | undefined): string {
+  const t = (type ?? "").toLowerCase();
+  if (t && EVENT_LABELS[t]) return EVENT_LABELS[t];
   return (type ?? "event").replace(/_/g, " ");
 }
 
