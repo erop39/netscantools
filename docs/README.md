@@ -1,4 +1,6 @@
-# NetInventory (qube.li)
+# netscantools (eG::39)
+
+**Version:** `0.9.0-beta.1` (first beta)
 
 Личная утилита для сканирования локальной сети, инвентаризации оборудования и быстрого доступа к его web-интерфейсам — из локальной сети и извне.
 
@@ -6,10 +8,12 @@
 
 - 🔍 **Сканирование сети** — обнаружение подключённого оборудования в заданной подсети (ARP-скан + опциональная проверка портов для web-UI).
 - 📋 **Журнал учёта** — собственная база оборудования с привязкой к IP/MAC, типом устройства, заметками, статусом (online/offline).
+- 🗺️ **Планировщик сети (Planner)** — singleton-план подсети: упорядоченные слоты (planned IP, MAC-привязка, резервы), порты (порт + метка), live vs planned, JSON export/import.
+- 🛡️ **Hygiene (LAN hygiene)** — network score, risk cards, security checklist, recent events; per-device latency, open ports (quick after scan / full on demand), security score and event timeline.
 - 🔗 **Web-UI ссылки** — для каждого устройства можно указать адрес панели управления как для доступа из LAN, так и для доступа извне.
 - 🔔 **Уведомления** — оповещения о новых, пропавших или изменивших IP устройствах.
 - 🕒 **Расписание сканирований** — автоматический запуск сканов по расписанию + ручной запуск из UI.
-- 🌙 **Тёмный интерфейс** — боковое меню и стилистика в духе qube.li (тёмно-синяя палитра, минимализм).
+- 🌙 **Тёмный интерфейс** — боковое меню и стилистика eG::39 (тёмно-синяя палитра, glass UI).
 
 ## Стек технологий
 
@@ -38,7 +42,7 @@
 | `id` | внутренний идентификатор |
 | `ip` | текущий IP-адрес |
 | `mac` | MAC-адрес (стабильный ключ устройства) |
-| `vendor` | производитель по OUI |
+| `vendor` | производитель по OUI (IEEE cache `backend/data/oui.txt`, auto-download on first run) |
 | `hostname` | сетевое имя, если резолвится |
 | `type` | тип оборудования (router, camera, NAS, IoT и т.д., задаётся вручную) |
 | `status` | online / offline / unknown |
@@ -50,21 +54,45 @@
 ## Разделы интерфейса
 
 - **Home** — дашборд: количество устройств онлайн, последние изменения, статус последнего скана.
-- **Devices** — список найденного оборудования, кнопки быстрого перехода в web-UI (LAN / внешний).
+- **Devices** — список найденного оборудования, latency / ports / score, кнопки web-UI (LAN / внешний).
+- **Hygiene** — network score, top risks, checklist, recent events; full port scan for all online.
+- **Planner** — план сети: слоты (IP, MAC, резерв), порты, сверка live vs planned, JSON export/import.
 - **Scans** — расписание и история сканирований, ручной запуск.
 - **Inventory** — ручной журнал: заметки, серийные номера, место установки, привязка к устройствам/IP.
 - **Notifications** — новое устройство в сети / устройство пропало / сменился IP у известного MAC.
 - **Account / Settings** — диапазон сети для скана, интервал сканирования, авторизация.
 
-## Установка (черновой план)
+## Установка / запуск
+
+### Один файл (рекомендуется на Windows)
+
+```powershell
+cd netPad
+python run.py
+```
+
+или двойной клик по `start.bat`.
+
+Поднимает backend + frontend в **одном** окне, открывает браузер.  
+Остановка: **Ctrl+C**.
+
+| | |
+|---|---|
+| UI | http://127.0.0.1:5173 |
+| API | http://127.0.0.1:8000 |
+| Логин | `admin` / `admin` |
+
+Нужны: Python 3.12+, Node.js (npm). При первом запуске venv и `npm install` ставятся сами.
+
+### Docker (позже)
 
 ```bash
 git clone <repo>
-cd netinventory
+cd netPad
 docker compose up -d
 ```
 
-Backend поднимется на `:8000`, frontend — на `:3000` (порт настраивается в `docker-compose.yml`).
+Backend `:8000`, frontend (dev) `:5173`.
 
 ### Настройка сканирования
 
@@ -79,11 +107,13 @@ Backend поднимется на `:8000`, frontend — на `:3000` (порт �
 
 ## Roadmap
 
-- [ ] MVP: CLI-скрипт ARP-скана с записью в SQLite
-- [ ] REST API (FastAPI) поверх БД
-- [ ] Web UI по дизайну (тёмная тема, боковое меню)
-- [ ] Ручной журнал/инвентарь с привязкой web-UI ссылок
-- [ ] Расписание сканирований + уведомления
+- [x] MVP: Windows scanner (ping + ARP) с записью в SQLite
+- [x] REST API (FastAPI) поверх БД
+- [x] Web UI по дизайну (тёмная тема, glass sidebar)
+- [x] Devices inventory с web-UI ссылками (LAN / external)
+- [x] Расписание сканирований + уведомления
+- [x] LAN Hygiene: scores, ports/latency, DeviceEvent, Hygiene page + checklist
+- [x] Inventory journal (расширенный журнал)
 - [ ] Docker-деплой + инструкция по VPN для внешнего доступа
 
 ## Лицензия
